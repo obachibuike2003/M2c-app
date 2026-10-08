@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>All products</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <div id="site-header"></div>
+
+  <main id="main" class="container">
+    <h1 class="page-title" id="list-title">All products</h1>
+    <div class="listing">
+      <aside class="card filters" aria-label="Filters">
+        <div class="label">Category</div>
+        <div class="filter-cats" id="filter-cats"></div>
+        <label class="field mt-12">
+          <span>Sort by</span>
+          <select id="sort">
+            <option value="popular">Most popular</option>
+            <option value="low">Price: low to high</option>
+            <option value="high">Price: high to low</option>
+            <option value="discount">Biggest discount</option>
+            <option value="rating">Top rated</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Maximum price (₦)</span>
+          <input id="max-price" type="number" min="0" step="1000" inputmode="numeric" placeholder="Any price">
+        </label>
+      </aside>
+      <div>
+        <p class="muted small" id="result-count" aria-live="polite"></p>
+        <div class="grid-products mt-12" id="results"></div>
+      </div>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/pages/products.js"></script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shop China, pay in naira</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <div id="site-header"></div>
+
+  <main id="main" class="container">
+    <section class="hero">
+      <div class="slider" id="hero-slider" aria-roledescription="carousel" aria-label="Featured">
+        <article class="slide slide-red is-active" aria-roledescription="slide">
+          <span class="slide-ring" aria-hidden="true"></span>
+          <div class="floaters" aria-hidden="true">
+            <div class="floater f1"><img src="assets/products/p101-1.webp" alt=""></div>
+            <div class="floater f2"><img src="assets/products/p91-1.webp" alt=""></div>
+            <div class="floater f3"><img src="assets/products/p172-1.webp" alt=""></div>
+            <div class="floater f4"><img src="assets/products/p193-1.webp" alt=""></div>
+          </div>
+          <span class="eyebrow"><i></i>Direct from China</span>
+          <h1>Factory prices, <em>paid in naira.</em></h1>
+          <p>Phones, fashion, home and more, shipped from China to your door. Pay from one naira wallet.</p>
+          <div class="row">
+            <a class="btn btn-white" href="products.html">Start shopping</a>
+            <a class="btn btn-ghost-white" href="#deals-h">See flash deals</a>
+          </div>
+        </article>
+
+        <article class="slide slide-photo bg-ship" aria-roledescription="slide">
+          <span class="eyebrow"><i></i>Shipping</span>
+          <h2>From the factory <em>to your door.</em></h2>
+          <p>Orders leave China and reach you in 7 to 18 days, with free delivery above <span data-free-from></span>.</p>
+          <div class="row">
+            <a class="btn btn-white" href="products.html">Browse products</a>
+            <a class="btn btn-ghost-white" href="orders.html">Track an order</a>
+          </div>
+        </article>
+
+        <article class="slide slide-photo bg-bitcoin" aria-roledescription="slide">
+          <span class="eyebrow"><i></i>Exchange</span>
+          <h2>Naira to RMB and crypto, <em>in seconds.</em></h2>
+          <p>Change naira to yuan, USDT, Bitcoin and more at clear rates, then send it out to Alipay, WeChat or any wallet.</p>
+          <div class="row">
+            <a class="btn btn-white" href="exchange.html">Exchange now</a>
+            <a class="btn btn-ghost-white" href="exchange.html#rates-h">See all rates</a>
+          </div>
+        </article>
+
+        <div class="slider-dots" id="slider-dots"></div>
+        <div class="slider-arrows">
+          <button type="button" id="slide-prev" aria-label="Previous slide"></button>
+          <button type="button" id="slide-next" aria-label="Next slide"></button>
+        </div>
+      </div>
+
+      <aside class="hero-side">
+        <div class="fx-mini" id="fx-mini" aria-label="Quick converter"></div>
+        <a class="hero-tile bg-port" href="exchange.html?asset=CNY">
+          <b>Pay your China supplier in RMB</b>
+          <span id="tile-rate"></span>
+        </a>
+      </aside>
+    </section>
+
+    <ul class="perks" id="perks"></ul>
+
+    <section class="section" aria-labelledby="cats-h">
+      <div class="section-head reveal">
+        <div><span class="kicker">Browse</span><h2 id="cats-h">Shop by category</h2></div>
+        <a href="products.html" id="cats-all">All products</a>
+      </div>
+      <div class="cat-bubbles" id="cat-bubbles"></div>
+    </section>
+
+    <section class="section deals reveal" aria-labelledby="deals-h">
+      <div class="deals-head">
+        <div>
+          <span class="deals-tag" id="deals-tag">Flash deals</span>
+          <h2 id="deals-h">Biggest price drops today</h2>
+        </div>
+        <div class="countdown" id="countdown" role="timer" aria-label="Time left"></div>
+      </div>
+      <div class="scroller" id="deals"></div>
+    </section>
+
+    <section class="section bento" aria-label="Featured collections">
+      <a class="bento-tile bento-lg reveal bg-warehouse" href="products.html">
+        <span class="kicker">Buy in bulk</span>
+        <h3>Stock your shop at factory prices</h3>
+        <p>Order straight from the source and sell at your own margin.</p>
+        <span class="bento-cta" data-arrow>Shop everything</span>
+      </a>
+      <a class="bento-tile bento-soft reveal" href="products.html?cat=phones" style="--i:1">
+        <span class="kicker">Phones &amp; tablets</span>
+        <h3>New phones from <span id="phones-from"></span></h3>
+        <span class="bento-cta mt-12" data-arrow>See phones</span>
+        <img class="b1" src="assets/products/p126-1.webp" alt="" loading="lazy">
+        <img class="b2" src="assets/products/p134-1.webp" alt="" loading="lazy">
+      </a>
+      <a class="bento-tile reveal bg-shopper" href="products.html?cat=fashion" style="--i:2">
+        <span class="kicker">Fashion</span>
+        <h3>Fresh looks, small prices</h3>
+        <span class="bento-cta mt-12" data-arrow>Shop fashion</span>
+      </a>
+    </section>
+
+    <section class="section" aria-labelledby="rec-h">
+      <div class="section-head reveal">
+        <div><span class="kicker">For you</span><h2 id="rec-h">Recommended for you</h2></div>
+      </div>
+      <div class="chips" id="rec-chips"></div>
+      <div class="grid-products mt-12" id="recommended"></div>
+      <div class="row mt-16" style="justify-content:center">
+        <button type="button" class="btn btn-outline" id="rec-more">Show more</button>
+      </div>
+    </section>
+
+    <section class="section fx-band reveal" aria-labelledby="fx-h">
+      <div>
+        <span class="kicker">Exchange</span>
+        <h2 id="fx-h">One wallet for naira, yuan and crypto.</h2>
+        <p>Add naira, exchange at the rate you see, and pay for orders or send money out, all from the same balance.</p>
+        <div class="row">
+          <a class="btn btn-primary" href="exchange.html">Start exchanging</a>
+          <a class="btn btn-ghost-white" href="wallet.html">Open wallet</a>
+        </div>
+      </div>
+      <div class="rate-tiles" id="rate-tiles"></div>
+    </section>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/pages/home.js"></script>
+</body>
+</html>
