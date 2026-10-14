@@ -6,6 +6,7 @@ mountChrome('orders');
 
   const root = $('#orders-root');
   const placed = new URLSearchParams(location.search).get('placed');
+  const last = TRACK_STAGES.length - 1;
 
   function render() {
     const orders = Store.userOrders(user.id);
@@ -15,25 +16,34 @@ mountChrome('orders');
     }
 
     root.innerHTML = `
-      ${placed && orders.some((o) => o.id === placed) ? `<p class="notice notice-ok">Order ${esc(placed)} placed. Thank you!</p>` : ''}
+      ${placed && orders.some((o) => o.id === placed) ? `<p class="notice notice-ok">Order ${esc(placed)} placed. Thank you! You can follow every step below.</p>` : ''}
       <div class="mt-16">
-        ${orders.map((o) => `
+        ${orders.map((o) => {
+          const cancelled = o.status === 'Cancelled';
+          return `
           <article class="card order">
             <div class="row spread">
-              <div><h2>${esc(o.id)}</h2><span class="small muted">${formatDate(o.createdAt)}</span></div>
+              <div><h2>${esc(o.id)}</h2><span class="small muted">${formatDate(o.createdAt)}${o.mode === 'business' ? ' · Business order' : ''}</span></div>
               ${statusPill(o.status)}
             </div>
+            ${cancelled ? '' : `
+              <div class="progress mt-12" role="img" aria-label="Step ${o.stage + 1} of ${last + 1}: ${esc(o.status)}">
+                <i style="--w:${(o.stage / last) * 100}%"></i>
+              </div>
+              <p class="small muted mt-12">${esc(TRACK_STAGES[o.stage].text)}</p>`}
             <ul class="order-items mt-12">
-              ${o.items.map((it) => `<li><span>${it.qty} × ${esc(it.name)}</span><span class="num">${money(it.price * it.qty)}</span></li>`).join('')}
+              ${o.items.map((it) => `<li><span>${it.qty} × ${esc(it.name)}${it.custom ? ` <span class="pill pill-blue">${it.custom.pieces} customised</span>` : ''}</span><span class="num">${money(it.price * it.qty)}</span></li>`).join('')}
             </ul>
             <div class="row spread mt-12">
               <span class="small muted">${o.pay === 'wallet' ? 'Paid from wallet' : 'Pay on delivery'} · Delivery ${o.shipping ? money(o.shipping) : 'free'}<br>To ${esc(o.address.street)}, ${esc(o.address.city)}, ${esc(o.address.state)}</span>
-              <span class="row">
-                <b class="price">${money(o.total)}</b>
-                ${o.status === 'Processing' ? `<button type="button" class="btn btn-outline btn-sm" data-cancel="${esc(o.id)}">Cancel order</button>` : ''}
-              </span>
+              <b class="price">${money(o.total)}</b>
             </div>
-          </article>`).join('')}
+            <div class="row mt-12">
+              ${cancelled ? '' : `<a class="btn btn-primary btn-sm" href="track.html?id=${encodeURIComponent(o.id)}">${icon('truck', 16)} Track order</a>`}
+              ${Store.canCancel(o) ? `<button type="button" class="btn btn-outline btn-sm" data-cancel="${esc(o.id)}">Cancel order</button>` : ''}
+            </div>
+          </article>`;
+        }).join('')}
       </div>`;
   }
 
@@ -41,7 +51,7 @@ mountChrome('orders');
     const btn = e.target.closest('[data-cancel]');
     if (!btn) return;
     if (!confirm('Cancel this order? Wallet payments are refunded straight away.')) return;
-    toast(Store.cancelMyOrder(btn.dataset.cancel) ? 'Order cancelled' : 'This order can no longer be cancelled', 'ok');
+    toast(Store.cancelMyOrder(btn.dataset.cancel) ? 'Order cancelled' : 'This order can no longer be cancelled');
     render();
   });
 

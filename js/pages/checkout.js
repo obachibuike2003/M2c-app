@@ -6,7 +6,7 @@ mountChrome('cart');
 
   const root = $('#checkout-root');
   const lines = Store.cartLines();
-  if (!lines.length) {
+  if (!lines.length || lines.some((l) => l.short)) {
     location.replace('cart.html');
     return;
   }
@@ -48,10 +48,11 @@ mountChrome('cart');
       <aside class="card summary">
         <h2>Your order</h2>
         <ul class="order-items mt-12">
-          ${lines.map((l) => `<li><span>${l.qty} × ${esc(l.product.name)}</span><span class="num">${money(l.product.price * l.qty)}</span></li>`).join('')}
+          ${lines.map((l) => `<li><span>${l.qty} × ${esc(l.product.name)}${l.custom ? ` <span class="pill pill-blue">${l.custom.pieces} customised</span>` : ''}</span><span class="num">${money(l.total)}</span></li>`).join('')}
         </ul>
         <dl>
           <div class="sum-row"><dt>Subtotal</dt><dd>${money(totals.subtotal)}</dd></div>
+          ${totals.bulkSaving > 0 ? `<div class="sum-row sum-save"><dt>Wholesale saving</dt><dd>-${money(totals.bulkSaving)}</dd></div>` : ''}
           <div class="sum-row"><dt>Delivery</dt><dd>${totals.shipping ? money(totals.shipping) : 'Free'}</dd></div>
           <div class="sum-row sum-total"><dt>Total</dt><dd>${money(totals.total)}</dd></div>
         </dl>

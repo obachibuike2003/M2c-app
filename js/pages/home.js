@@ -3,6 +3,7 @@ mountChrome('home');
 (function () {
   const rates = Store.rates();
   const products = Store.products();
+  const user = Store.currentUser();
 
   /* ---------- small fills ---------- */
   $$('[data-free-from]').forEach((el) => { el.textContent = money(APP.freeShippingFrom); });
@@ -102,6 +103,37 @@ mountChrome('home');
     update();
   })();
 
+  /* ---------- personal / business card ---------- */
+  (function modeCard() {
+    const box = $('#mode-card');
+    if (user && user.mode === 'business') {
+      const a = Store.agent(user.agentId);
+      const unseen = Store.unseenFor(user.id, 'user');
+      box.innerHTML = `
+        <div class="mode-card-head">
+          <div><span class="kicker">${icon('briefcase', 14)} Business buying</span><h2>${esc(user.business.name)}</h2>
+          <p class="small muted">Wholesale prices from ${Store.bulk().minQty} pieces${a ? ` · Your agent: ${esc(a.name)}` : ''}</p></div>
+          <button type="button" class="btn btn-outline btn-sm" data-switch-mode="personal">Switch to personal</button>
+        </div>
+        <div class="quick-links">
+          <a href="business.html#agent">${icon('chat', 22)}<span>Chat with ${a ? esc(a.name) : 'your agent'}</span>${unseen ? `<b class="count">${unseen}</b>` : ''}</a>
+          <a href="assistant.html">${icon('bot', 22)}<span>AI assistant</span></a>
+          <a href="brand.html">${icon('palette', 22)}<span>Build my brand</span></a>
+          <a href="orders.html">${icon('truck', 22)}<span>Track my goods</span></a>
+        </div>`;
+      $('#rec-h').textContent = `Picked for your ${Store.businessType(user.business.type) ? Store.businessType(user.business.type).name.toLowerCase() : 'business'}`;
+    } else {
+      box.innerHTML = `
+        <div class="mode-card-head">
+          <div><span class="kicker">${icon('briefcase', 14)} Own a business?</span><h2>Buy in bulk at wholesale prices</h2>
+          <p class="small muted">From ${Store.bulk().minQty} pieces, with your own agent, your logo on the goods and an AI business assistant. Free.</p></div>
+          <button type="button" class="btn btn-primary btn-sm" data-switch-mode="business">Switch to business</button>
+        </div>`;
+    }
+  })();
+
+  showcase();
+
   /* ---------- perks, categories, rates ---------- */
   $('#perks').innerHTML = [
     ['truck', 'Shipped from China', `Free above ${money(APP.freeShippingFrom)}`],
@@ -110,9 +142,9 @@ mountChrome('home');
     ['headset', 'Real support', 'We answer every order']
   ].map(([ic, title, text], i) => `<li class="reveal" style="--i:${i}"><span class="perk-ic">${icon(ic, 22)}</span><div><b>${title}</b><span>${text}</span></div></li>`).join('');
 
-  $('#cat-bubbles').innerHTML = CATEGORIES.map((c, i) => `
-    <a class="cat-bubble reveal" href="products.html?cat=${c.id}" style="--i:${i}">
-      <span class="bubble" style="--h:${c.hue}"><img src="${esc(c.img)}" alt="" loading="lazy"></span>
+  $('#cat-bubbles').innerHTML = categories().map((c, i) => `
+    <a class="cat-bubble reveal" href="products.html?cat=${encodeURIComponent(c.id)}" style="--i:${i % 8}">
+      <span class="bubble" style="--h:${c.hue}">${categoryArt(c, 34)}</span>
       ${esc(c.name)}
     </a>`).join('');
 
@@ -152,10 +184,11 @@ mountChrome('home');
   /* ---------- recommended, with category chips ---------- */
   const PAGE = 15;
   const rec = { cat: '', shown: PAGE };
-  const sorted = [...products].sort((a, b) => (b.sold || 0) - (a.sold || 0));
+  // Ordered for this user: their business type, favourites and past orders come first.
+  const sorted = Store.recommend(user, products.length);
 
   function renderRecommended() {
-    $('#rec-chips').innerHTML = [{ id: '', name: 'All' }, ...CATEGORIES].map((c) =>
+    $('#rec-chips').innerHTML = [{ id: '', name: 'All' }, ...categories()].map((c) =>
       `<button type="button" class="chip${rec.cat === c.id ? ' is-on' : ''}" data-cat="${c.id}" aria-pressed="${rec.cat === c.id}">${esc(c.name)}</button>`).join('');
     const list = sorted.filter((p) => !rec.cat || p.cat === rec.cat);
     $('#recommended').innerHTML = list.length

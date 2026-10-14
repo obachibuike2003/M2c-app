@@ -34,7 +34,25 @@ const ICONS = {
   cup: '<path d="M5 8h12v5a6 6 0 0 1-12 0z"/><path d="M17 9h2a2 2 0 0 1 0 4h-2"/><path d="M4 21h14"/>',
   droplet: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
   bag: '<path d="M5 8h14l1 13H4z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
-  smile: '<circle cx="12" cy="12" r="9"/><path d="M8.5 14a4 4 0 0 0 7 0"/><path d="M9 9.5v.01M15 9.5v.01"/>'
+  smile: '<circle cx="12" cy="12" r="9"/><path d="M8.5 14a4 4 0 0 0 7 0"/><path d="M9 9.5v.01M15 9.5v.01"/>',
+  factory: '<path d="M3 21V10l6 4V10l6 4V5h4l2 16z"/><path d="M7 17h2M12 17h2"/>',
+  flask: '<path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7.5 15h9"/>',
+  cpu: '<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx=".5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>',
+  sparkle: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>',
+  sofa: '<path d="M5 11V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3"/><path d="M3 13a2 2 0 0 1 4 0v2h10v-2a2 2 0 0 1 4 0v5H3z"/><path d="M5 18v2M19 18v2"/>',
+  car: '<path d="M5 17h14v-4.5l-2-5A2 2 0 0 0 15.2 6H8.8A2 2 0 0 0 7 7.5l-2 5z"/><path d="M5 12.5h14"/><circle cx="8" cy="17" r="1.8"/><circle cx="16" cy="17" r="1.8"/>',
+  heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+  briefcase: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/>',
+  chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+  bot: '<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 13v1M15 13v1M9.5 17h5"/><circle cx="12" cy="3.5" r="1"/>',
+  palette: '<path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.5-.8 1.5-1.5 0-1.2-1-1.6-1-2.6 0-.9.7-1.4 1.6-1.4H16a5 5 0 0 0 5-5c0-4.1-4-7.5-9-7.5z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/>',
+  upload: '<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>',
+  play: '<circle cx="12" cy="12" r="9"/><path d="m10 8.5 5 3.5-5 3.5z" fill="currentColor"/>',
+  camera: '<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/>',
+  send: '<path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4z"/>',
+  wand: '<path d="m4 20 11-11"/><path d="m13 7 2-2 4 4-2 2z"/><path d="M6 3v3M4.5 4.5h3M19 14v3M17.5 15.5h3"/>',
+  whatsapp: '<path d="M20 11.5A8.5 8.5 0 0 1 7.6 19L3 20l1.1-4.4A8.5 8.5 0 1 1 20 11.5z"/><path d="M9 8.5c0 3.5 2.5 6.5 6.5 6.5l1-1.5-2-1-1 1c-1.2-.5-2.3-1.6-2.8-2.8l1-1-1-2z"/>',
+  tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.5"/>'
 };
 
 function icon(name, size = 20, cls = '') {
@@ -54,7 +72,10 @@ function money(amount, code = 'NGN') {
 }
 
 const toYuan = (naira) => naira / Store.rates().CNY.buy;
-const categoryOf = (id) => CATEGORIES.find((c) => c.id === id) || CATEGORIES[0];
+const categories = () => Store.categories();
+const categoryOf = (id) => categories().find((c) => c.id === id) || { id, name: 'Other', icon: 'box', hue: 220, img: '' };
+// Category picture, or its icon when there is no picture.
+const categoryArt = (c, size = 30) => (safeImage(c.img) ? `<img src="${esc(c.img)}" alt="" loading="lazy">` : icon(c.icon || 'box', size));
 const discountOf = (p) => (p.oldPrice > p.price ? Math.round((1 - p.price / p.oldPrice) * 100) : 0);
 const compact = (n) => (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : String(n));
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -77,25 +98,32 @@ function productThumb(p, iconSize = 56) {
 }
 
 // i staggers the scroll-reveal; deal adds the "claimed" bar used in flash deals.
+// In business mode the card shows the bulk price at the minimum order.
 function productCard(p, i = 0, deal = false) {
   const off = discountOf(p);
-  const out = p.stock < 1;
   const href = `product.html?id=${encodeURIComponent(p.id)}`;
   const claimed = 35 + ((p.sold || 0) % 58);
+  const biz = Store.isBusiness();
+  const min = biz ? Store.bulkMin(p) : 1;
+  const out = p.stock < min;
+  const fav = Store.isFav(p.id);
+  const unit = Store.unitPrice(p, min);
   return `
     <article class="product reveal" style="--i:${i % 5}">
       <div class="thumb-wrap">
         <a class="thumb" href="${href}" tabindex="-1" aria-hidden="true">
           ${productThumb(p)}
           ${off ? `<span class="badge badge-off">-${off}%</span>` : ''}
+          ${p.condition === 'used' ? '<span class="badge badge-used">Used</span>' : ''}
         </a>
-        <button class="add-fab" type="button" data-add="${esc(p.id)}" aria-label="${out ? 'Out of stock' : 'Add ' + esc(p.name) + ' to cart'}" ${out ? 'disabled' : ''}>${icon(out ? 'x' : 'plus', 20)}</button>
+        <button class="fav-btn" type="button" data-fav="${esc(p.id)}" aria-pressed="${fav}" aria-label="Save ${esc(p.name)}">${icon('heart', 18)}</button>
+        <button class="add-fab" type="button" data-add="${esc(p.id)}" aria-label="${out ? 'Out of stock' : `Add ${biz ? min + ' of ' : ''}${esc(p.name)} to cart`}" ${out ? 'disabled' : ''}>${icon(out ? 'x' : 'plus', 20)}</button>
       </div>
       <div class="product-body">
         <a class="product-link" href="${href}"><h3 class="product-name">${esc(p.name)}</h3></a>
         <div class="price-row">
-          <span class="price">${money(p.price)}</span>
-          ${off ? `<span class="old-price">${money(p.oldPrice)}</span>` : ''}
+          <span class="price">${money(unit)}</span>
+          ${biz ? `<span class="min-note">${p.stock < min ? 'Not enough for bulk' : `each · min. ${min}`}</span>` : off ? `<span class="old-price">${money(p.oldPrice)}</span>` : ''}
         </div>
         ${deal ? `
           <div class="claimed">
@@ -111,7 +139,10 @@ function productCard(p, i = 0, deal = false) {
 }
 
 function statusPill(status) {
-  const tone = { Processing: 'amber', processing: 'amber', Shipped: 'blue', Delivered: 'green', completed: 'green', Cancelled: 'grey', rejected: 'grey' }[status] || 'grey';
+  const tone = {
+    Processing: 'amber', processing: 'amber', 'Order placed': 'amber', Confirmed: 'amber', pending: 'amber',
+    Delivered: 'green', completed: 'green', verified: 'green', Cancelled: 'grey', rejected: 'grey'
+  }[status] || (TRACK_STAGES.some((s) => s.name === status) ? 'blue' : 'grey');
   return `<span class="pill pill-${tone}">${esc(status)}</span>`;
 }
 
@@ -238,6 +269,130 @@ function requireLogin() {
   return null;
 }
 
+// For business-only pages: signed-in business users get through, others see a prompt to switch.
+function requireBusiness(root) {
+  const user = requireLogin();
+  if (!user) return null;
+  if (user.mode === 'business') return user;
+  root.innerHTML = `
+    <div class="card empty">
+      ${icon('briefcase', 40)}
+      <h1>For business owners</h1>
+      <p>Switch to business buying to get wholesale prices, your own agent, custom branding and the AI business assistant. It's free.</p>
+      <button type="button" class="btn btn-primary" data-switch-mode="business">Switch to business</button>
+    </div>`;
+  return null;
+}
+
+// Reads an image file and shrinks it so it fits in browser storage. Returns a data URL.
+function readImage(file, maxSide = 600, type = 'image/jpeg', quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    if (!file || !/^image\//.test(file.type)) return reject(new Error('Pick an image file (JPG, PNG or WebP).'));
+    if (file.size > 8 * 1024 * 1024) return reject(new Error('That image is over 8 MB. Pick a smaller one.'));
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read that file.'));
+    reader.onload = () => {
+      // GIFs are kept as they are so they still move.
+      if (file.type === 'image/gif') {
+        return file.size > 900 * 1024 ? reject(new Error('GIFs must be under 900 KB in this demo.')) : resolve(String(reader.result));
+      }
+      const img = new Image();
+      img.onerror = () => reject(new Error('Could not open that image.'));
+      img.onload = () => {
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL(type, quality));
+      };
+      img.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+const waLink = (number, text = '') => `https://wa.me/${String(number || '').replace(/\D/g, '')}${text ? '?text=' + encodeURIComponent(text) : ''}`;
+
+// Asks for business details (when missing) and switches the signed-in user's mode.
+function switchMode(next) {
+  const user = Store.currentUser();
+  if (!user) {
+    location.href = 'login.html?next=' + encodeURIComponent(location.pathname.split('/').pop() + location.search);
+    return;
+  }
+  const done = (res) => {
+    if (!res.ok) return toast(res.error, 'error');
+    toast(next === 'business' ? 'You are now buying as a business' : 'You are now buying for yourself');
+    setTimeout(() => location.reload(), 500);
+  };
+  if (next === 'personal' || (user.business && user.business.name)) return done(Store.setMode(next));
+
+  const dlg = openDialog('Buy as a business', `
+    <p class="muted">Get wholesale prices (from ${Store.bulk().minQty} pieces), your own agent, custom branding and the AI business assistant. Free to use.</p>
+    <form id="biz-form" class="mt-16" novalidate>
+      <label class="field"><span>Business name</span><input name="name" required maxlength="80" autocomplete="organization"></label>
+      <label class="field"><span>Type of business</span>
+        <select name="type" required>
+          <option value="">Choose one</option>
+          ${BUSINESS_TYPES.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('')}
+        </select>
+        <small class="hint">We use this to show you the right products.</small>
+      </label>
+      <p class="form-error" role="alert" hidden></p>
+      <div class="form-actions"><button class="btn btn-primary" type="submit">Switch to business</button><button class="btn btn-outline" type="button" data-close>Not now</button></div>
+    </form>`);
+  $('#biz-form', dlg).addEventListener('submit', (e) => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target));
+    const res = Store.setMode('business', d);
+    if (!res.ok) return showError($('.form-error', dlg), res.error);
+    dlg.close();
+    done(res);
+  });
+}
+
+// First visit: a short intro to what the app does.
+function showcase() {
+  if (Store.flag('showcase')) return;
+  const slides = [
+    ['bag', 'Shop China, pay in naira', 'Phones, fashion, furniture, cars and more, bought straight from China and delivered to your door.'],
+    ['briefcase', 'Buying for your business?', `Switch to business for wholesale prices from ${Store.bulk().minQty} pieces, your own agent, and your logo on the goods.`],
+    ['truck', 'Track every step', 'Follow your order from the factory to your door, and pay from one naira wallet.']
+  ];
+  let i = 0;
+  const dlg = document.createElement('dialog');
+  dlg.className = 'modal showcase';
+  document.body.appendChild(dlg);
+  const close = () => { Store.setFlag('showcase'); dlg.close(); };
+  function render() {
+    const [ic, title, text] = slides[i];
+    const last = i === slides.length - 1;
+    dlg.innerHTML = `
+      <div class="showcase-art">${icon(ic, 54)}</div>
+      <div class="modal-body">
+        <span class="kicker">Welcome to ${esc(APP.name)}</span>
+        <h2>${title}</h2>
+        <p class="muted mt-12">${text}</p>
+        <div class="showcase-dots" aria-hidden="true">${slides.map((_, n) => `<i${n === i ? ' class="on"' : ''}></i>`).join('')}</div>
+        <div class="form-actions">
+          ${last
+            ? `<a class="btn btn-primary" href="login.html" data-go>${Store.currentUser() ? 'Start shopping' : 'Create account'}</a><button class="btn btn-outline" type="button" data-skip>Just browse</button>`
+            : `<button class="btn btn-primary" type="button" data-next>Next ${icon('arrowRight', 18)}</button><button class="btn btn-outline" type="button" data-skip>Skip</button>`}
+        </div>
+      </div>`;
+  }
+  dlg.addEventListener('click', (e) => {
+    if (e.target.closest('[data-next]')) { i++; render(); }
+    if (e.target.closest('[data-skip]')) close();
+    if (e.target.closest('[data-go]')) Store.setFlag('showcase');
+  });
+  dlg.addEventListener('cancel', () => Store.setFlag('showcase'));
+  dlg.addEventListener('close', () => dlg.remove());
+  render();
+  dlg.showModal();
+}
+
 function logoHtml(extraClass = '') {
   return `<a class="logo ${extraClass}" href="index.html"><span class="logo-mark" aria-hidden="true">${esc(APP.name.charAt(0))}</span>${esc(APP.name)}</a>`;
 }
@@ -245,13 +400,16 @@ function logoHtml(extraClass = '') {
 function mountChrome(active) {
   document.title = `${document.title} | ${APP.name}`;
   const user = Store.currentUser();
+  const biz = user && user.mode === 'business';
   const rates = Store.rates();
   const q = new URLSearchParams(location.search).get('q') || '';
-  const link = (href, ic, label, key, mobile = false) =>
-    `<a href="${href}" class="hdr-link${mobile ? '' : ' hide-m'}${active === key ? ' is-active' : ''}"${active === key ? ' aria-current="page"' : ''}>${icon(ic, 22)}<span>${label}</span></a>`;
+  const unseen = biz ? Store.unseenFor(user.id, 'user') : 0;
+  const link = (href, ic, label, key, mobile = false, extra = '') =>
+    `<a href="${href}" class="hdr-link${mobile ? '' : ' hide-m'}${active === key ? ' is-active' : ''}"${active === key ? ' aria-current="page"' : ''}>${icon(ic, 22)}<span>${label}</span>${extra}</a>`;
 
   const tickerItems = [
     `<span class="ticker-item">${icon('truck', 16)} Free delivery above <b>${money(APP.freeShippingFrom)}</b></span>`,
+    `<span class="ticker-item">${icon('briefcase', 16)} Business buyers: wholesale from <b>${Store.bulk().minQty} pieces</b></span>`,
     ...Object.keys(rates).map((c) => `<span class="ticker-item">1 ${c} <b>${money(rates[c].buy)}</b></span>`),
     `<span class="ticker-item">${icon('shield', 16)} Buyer protection on every order</span>`
   ].join('');
@@ -263,20 +421,23 @@ function mountChrome(active) {
         <div class="ticker-group" aria-hidden="true">${tickerItems}</div>
       </div>
     </div>
-    <header class="hdr" id="site-header">
+    <header class="hdr${biz ? ' is-biz' : ''}" id="site-header">
       <div class="container hdr-row">
         ${logoHtml()}
+        <div class="mode-switch" role="group" aria-label="Buying as">
+          <button type="button" data-switch-mode="personal" aria-pressed="${!biz}">Personal</button>
+          <button type="button" data-switch-mode="business" aria-pressed="${!!biz}">Business</button>
+        </div>
         <form class="search" action="products.html" role="search">
-          <input type="search" name="q" value="${esc(q)}" placeholder="Search phones, fashion, gadgets" aria-label="Search products">
+          <input type="search" name="q" value="${esc(q)}" placeholder="Search phones, cars, raw materials" aria-label="Search products">
           <button type="submit" aria-label="Search">${icon('search')}</button>
         </form>
         <nav class="hdr-actions" aria-label="Main">
-          ${link('exchange.html', 'swap', 'Exchange', 'exchange')}
-          ${link('wallet.html', 'wallet', 'Wallet', 'wallet')}
+          ${biz ? link('business.html', 'briefcase', 'Business', 'business', false, unseen ? `<b class="count">${unseen}</b>` : '') : link('exchange.html', 'swap', 'Exchange', 'exchange')}
           ${link('orders.html', 'box', 'Orders', 'orders')}
           ${user && user.role === 'admin' ? link('admin.html', 'settings', 'Admin', 'admin') : ''}
           ${user
-            ? link('wallet.html', 'user', esc(user.name.split(' ')[0]), 'account', true)
+            ? link('account.html', 'user', esc(user.name.split(' ')[0]), 'account', true)
             : link('login.html', 'user', 'Sign in', 'login', true)}
           <a href="cart.html" class="hdr-link${active === 'cart' ? ' is-active' : ''}" data-cart-target>
             ${icon('cart', 22)}<span>Cart</span><b class="count" data-cart-count hidden>0</b>
@@ -286,7 +447,8 @@ function mountChrome(active) {
       <nav class="cat-strip" aria-label="Categories">
         <div class="container cat-strip-in">
           <a href="products.html">All products</a>
-          ${CATEGORIES.map((c) => `<a href="products.html?cat=${c.id}">${esc(c.name)}</a>`).join('')}
+          <a href="products.html?condition=used">Used</a>
+          ${categories().map((c) => `<a href="products.html?cat=${encodeURIComponent(c.id)}">${esc(c.name)}</a>`).join('')}
         </div>
       </nav>
     </header>`;
@@ -299,24 +461,25 @@ function mountChrome(active) {
       <div class="container ftr-grid">
         <div>
           ${logoHtml('logo-light')}
-          <p>${esc(APP.tagline)} Goods sourced from China, plus naira exchange for yuan and crypto in one wallet.</p>
+          <p>${esc(APP.tagline)} Goods sourced from China for you and your business, plus naira exchange for yuan and crypto in one wallet.</p>
         </div>
         <div>
           <h3>Shop</h3>
           <a href="products.html">All products</a>
-          <a href="cart.html">Cart</a>
-          <a href="orders.html">My orders</a>
+          <a href="products.html?condition=used">Used products</a>
+          <a href="orders.html">Track my orders</a>
         </div>
         <div>
-          <h3>Exchange</h3>
-          <a href="exchange.html?asset=CNY">Naira to RMB</a>
-          <a href="exchange.html?asset=USDT">Naira to USDT</a>
-          <a href="wallet.html">Wallet</a>
+          <h3>Business</h3>
+          <a href="business.html">Business hub</a>
+          <a href="assistant.html">AI assistant</a>
+          <a href="brand.html">Build my brand</a>
         </div>
         <div>
           <h3>Help</h3>
+          <a href="exchange.html">Exchange</a>
+          <a href="wallet.html">Wallet</a>
           <a href="mailto:${esc(APP.supportEmail)}">${esc(APP.supportEmail)}</a>
-          <a href="login.html">Sign in</a>
         </div>
       </div>
       <div class="container ftr-note">Demo build: payments, balances and exchange rates are simulated and stored only in this browser.</div>
@@ -324,9 +487,11 @@ function mountChrome(active) {
     <nav class="bottom-nav" aria-label="Quick">
       ${tab('index.html', 'home', 'Home', 'home')}
       ${tab('products.html', 'grid', 'Shop', 'shop')}
-      ${tab('exchange.html', 'swap', 'Exchange', 'exchange')}
+      ${biz
+        ? tab('business.html', 'briefcase', 'Business', 'business', unseen ? `<b class="count">${unseen}</b>` : '')
+        : tab('exchange.html', 'swap', 'Exchange', 'exchange')}
       ${tab('cart.html', 'cart', 'Cart', 'cart', '<b class="count" data-cart-count hidden>0</b>', 'data-cart-target')}
-      ${tab(user ? 'wallet.html' : 'login.html', 'user', user ? 'Wallet' : 'Sign in', user ? 'wallet' : 'login')}
+      ${tab(user ? 'account.html' : 'login.html', 'user', user ? 'Account' : 'Sign in', user ? 'account' : 'login')}
     </nav>`;
 
   updateCartCount();
@@ -337,13 +502,31 @@ function mountChrome(active) {
   addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
-  // Any "Add to cart" button on any page.
   document.addEventListener('click', (e) => {
+    // Personal / business switch, anywhere on the page.
+    const sw = e.target.closest('[data-switch-mode]');
+    if (sw) {
+      if (sw.getAttribute('aria-pressed') !== 'true') switchMode(sw.dataset.switchMode);
+      return;
+    }
+
+    // Save / unsave a product.
+    const fav = e.target.closest('[data-fav]');
+    if (fav) {
+      const on = Store.toggleFav(fav.dataset.fav);
+      if (on === null) return toast('Sign in to save products', 'error');
+      $$(`[data-fav="${CSS.escape(fav.dataset.fav)}"]`).forEach((b) => b.setAttribute('aria-pressed', on));
+      return toast(on ? 'Saved to your favourites' : 'Removed from favourites');
+    }
+
+    // Any "Add to cart" button on any page. Business buyers add the minimum bulk amount.
     const btn = e.target.closest('[data-add]');
     if (!btn) return;
-    const res = Store.addToCart(btn.dataset.add, 1);
+    const p = Store.product(btn.dataset.add);
+    const qty = p && Store.isBusiness() ? Store.bulkMin(p) : 1;
+    const res = Store.addToCart(btn.dataset.add, qty);
     if (!res.ok) return toast(res.error, 'error');
-    toast('Added to cart');
+    toast(qty > 1 ? `Added ${qty} to cart` : 'Added to cart');
     const card = btn.closest('.product');
     flyToCart(card && $('.thumb img', card));
   });
