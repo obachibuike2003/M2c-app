@@ -117,6 +117,7 @@ function productCard(p, i = 0, deal = false) {
           ${p.condition === 'used' ? '<span class="badge badge-used">Used</span>' : ''}
         </a>
         <button class="fav-btn" type="button" data-fav="${esc(p.id)}" aria-pressed="${fav}" aria-label="Save ${esc(p.name)}">${icon('heart', 18)}</button>
+        ${biz ? `<button class="customize-fab" type="button" data-customize="${esc(p.id)}" aria-label="Customize ${esc(p.name)} with your brand" title="Customize with your brand">${icon('plus', 20)}</button>` : ''}
         <button class="add-fab" type="button" data-add="${esc(p.id)}" aria-label="${out ? 'Out of stock' : `Add ${biz ? min + ' of ' : ''}${esc(p.name)} to cart`}" ${out ? 'disabled' : ''}>${icon(out ? 'x' : 'plus', 20)}</button>
       </div>
       <div class="product-body">
@@ -397,7 +398,7 @@ function logoHtml(extraClass = '') {
   return `<a class="logo ${extraClass}" href="index.html"><span class="logo-mark" aria-hidden="true">${esc(APP.name.charAt(0))}</span>${esc(APP.name)}</a>`;
 }
 
-function mountChrome(active) {
+function mountChrome(active, { hideCategories = false } = {}) {
   document.title = `${document.title} | ${APP.name}`;
   const user = Store.currentUser();
   const biz = user && user.mode === 'business';
@@ -444,13 +445,13 @@ function mountChrome(active) {
           </a>
         </nav>
       </div>
-      <nav class="cat-strip" aria-label="Categories">
+      ${hideCategories ? '' : `<nav class="cat-strip" aria-label="Categories">
         <div class="container cat-strip-in">
           <a href="products.html">All products</a>
           <a href="products.html?condition=used">Used</a>
           ${categories().map((c) => `<a href="products.html?cat=${encodeURIComponent(c.id)}">${esc(c.name)}</a>`).join('')}
         </div>
-      </nav>
+      </nav>`}
     </header>`;
 
   const tab = (href, ic, label, key, extra = '', attrs = '') =>
@@ -517,6 +518,12 @@ function mountChrome(active) {
       if (on === null) return toast('Sign in to save products', 'error');
       $$(`[data-fav="${CSS.escape(fav.dataset.fav)}"]`).forEach((b) => b.setAttribute('aria-pressed', on));
       return toast(on ? 'Saved to your favourites' : 'Removed from favourites');
+    }
+
+    const customize = e.target.closest('[data-customize]');
+    if (customize) {
+      location.href = `product.html?id=${encodeURIComponent(customize.dataset.customize)}&customize=1`;
+      return;
     }
 
     // Any "Add to cart" button on any page. Business buyers add the minimum bulk amount.

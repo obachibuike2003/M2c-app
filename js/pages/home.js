@@ -1,4 +1,4 @@
-mountChrome('home');
+mountChrome('home', { hideCategories: true });
 
 (function () {
   const rates = Store.rates();
@@ -65,42 +65,6 @@ mountChrome('home');
     });
 
     show(0);
-  })();
-
-  /* ---------- quick converter ---------- */
-  (function converter() {
-    const box = $('#fx-mini');
-    const codes = Object.keys(rates);
-    box.innerHTML = `
-      <h2>Quick convert</h2>
-      <span class="small">See what your naira gets you</span>
-      <div class="fx-mini-box">
-        <label for="mini-amount">You pay</label>
-        <div class="fx-mini-line">
-          <input id="mini-amount" type="number" inputmode="decimal" min="0" step="any" value="100000">
-          <span class="code">NGN</span>
-        </div>
-      </div>
-      <div class="fx-mini-box">
-        <span class="lbl">You receive</span>
-        <div class="fx-mini-line">
-          <output id="mini-out" for="mini-amount" aria-live="polite"></output>
-          <select id="mini-asset" aria-label="Currency">${codes.map((c) => `<option value="${c}">${c}</option>`).join('')}</select>
-        </div>
-      </div>
-      <a class="btn btn-primary btn-block mt-16" id="mini-go" href="exchange.html">Exchange now ${icon('arrowRight', 18, 'ic-arrow')}</a>`;
-
-    const out = $('#mini-out');
-    function update() {
-      const code = $('#mini-asset').value;
-      const dp = rates[code].dp;
-      const value = Store.quote('NGN', code, $('#mini-amount').value);
-      const symbol = code === 'CNY' ? '¥' : '';
-      animateNumber(out, value, (n) => symbol + n.toLocaleString('en-NG', { minimumFractionDigits: Math.min(dp, 2), maximumFractionDigits: dp }), 500);
-      $('#mini-go').href = 'exchange.html?asset=' + code;
-    }
-    box.addEventListener('input', update);
-    update();
   })();
 
   /* ---------- personal / business card ---------- */

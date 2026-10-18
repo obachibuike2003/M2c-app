@@ -1,8 +1,10 @@
-mountChrome('shop');
+mountChrome('shop', { hideCategories: true });
+document.body.classList.add('product-detail-page');
 
 (function () {
   const root = $('#pdp-root');
-  const p = Store.product(new URLSearchParams(location.search).get('id'));
+  const pageParams = new URLSearchParams(location.search);
+  const p = Store.product(pageParams.get('id'));
 
   if (!p) {
     root.innerHTML = `<div class="card empty">${icon('box', 40)}<h1>Product not found</h1><p>It may have been removed.</p><a class="btn btn-primary" href="products.html">Browse products</a></div>`;
@@ -39,9 +41,10 @@ mountChrome('shop');
           ${off && !biz ? `<span class="badge badge-off">-${off}%</span>` : ''}
           <button class="fav-btn fav-lg" type="button" data-fav="${esc(p.id)}" aria-pressed="${Store.isFav(p.id)}" aria-label="Save ${esc(p.name)}">${icon('heart', 22)}</button>
         </div>
-        ${media.length > 1 ? `
+        ${media.length > 1 || biz ? `
           <div class="gallery-thumbs">
             ${media.map((m, i) => `<button type="button" data-photo="${esc(m.src)}" aria-pressed="${i === 0}" aria-label="${m.gif ? 'Moving view' : 'Photo ' + (i + 1)}"${m.gif ? ' class="is-gif"' : ''}><img src="${esc(m.src)}" alt="">${m.gif ? `<span>${icon('play', 22)}</span>` : ''}</button>`).join('')}
+            ${biz ? `<button class="gallery-customize" id="custom-btn" type="button" aria-label="Customize ${esc(p.name)} with your brand" title="Customize with your brand" ${out ? 'disabled' : ''}>${icon('plus', 24)}</button>` : ''}
           </div>` : ''}
       </div>
 
@@ -89,8 +92,6 @@ mountChrome('shop');
         </div>
         ${biz && out && p.stock > 0 ? `<p class="notice">Only ${p.stock} left, which is below the business minimum of ${min}. Switch to personal to buy what's left.</p>` : ''}
 
-        ${biz ? `
-          <button class="btn btn-soft btn-block" id="custom-btn" type="button" ${out ? 'disabled' : ''}>${icon('wand', 18)} Customise with your logo</button>` : ''}
         <div class="row pdp-actions">
           <button class="btn btn-outline" id="add-btn" type="button" ${out ? 'disabled' : ''}>${icon('cart', 18)} Add to cart</button>
           <button class="btn btn-primary" id="buy-btn" type="button" ${out ? 'disabled' : ''}>Buy now ${icon('arrowRight', 18, 'ic-arrow')}</button>
@@ -330,5 +331,11 @@ mountChrome('shop');
   if (related.length) {
     $('#related').innerHTML = related.map((x, i) => productCard(x, i)).join('');
     $('#related-section').hidden = false;
+  }
+
+  if (biz && pageParams.get('customize') === '1') {
+    pageParams.delete('customize');
+    history.replaceState(null, '', location.pathname + (pageParams.toString() ? '?' + pageParams : ''));
+    customiser();
   }
 })();

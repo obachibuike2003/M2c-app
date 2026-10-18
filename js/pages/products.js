@@ -1,8 +1,15 @@
-mountChrome('shop');
+mountChrome('shop', { hideCategories: true });
 
 (function () {
   const params = new URLSearchParams(location.search);
   const CONDITIONS = [['', 'All'], ['new', 'Brand new'], ['used', 'Used']];
+  const SORT_OPTIONS = [
+    ['popular', 'Most popular'],
+    ['low', 'Price: low to high'],
+    ['high', 'Price: high to low'],
+    ['discount', 'Biggest discount'],
+    ['rating', 'Top rated']
+  ];
   const state = {
     q: (params.get('q') || '').trim().toLowerCase(),
     cat: categories().some((c) => c.id === params.get('cat')) ? params.get('cat') : '',
@@ -21,6 +28,71 @@ mountChrome('shop');
 
   const chip = (attr, value, label, on) =>
     `<button type="button" class="chip${on ? ' is-on' : ''}" data-${attr}="${esc(value)}" aria-pressed="${on}">${esc(label)}</button>`;
+
+  const sortTrigger = $('#sort-trigger');
+  const sortValue = $('#sort-value');
+  const sortOptions = $('#sort-options');
+  const sortControl = $('#sort-control');
+
+  sortOptions.innerHTML = SORT_OPTIONS.map(([value, label]) =>
+    `<button type="button" role="option" class="sort-option" data-sort="${value}" aria-selected="${value === state.sort}">${label}</button>`
+  ).join('');
+
+  function closeSortMenu(returnFocus = false) {
+    sortOptions.hidden = true;
+    sortTrigger.setAttribute('aria-expanded', 'false');
+    if (returnFocus) sortTrigger.focus();
+  }
+
+  function openSortMenu(focusSelected = false) {
+    sortOptions.hidden = false;
+    sortTrigger.setAttribute('aria-expanded', 'true');
+    if (focusSelected) sortOptions.querySelector('[aria-selected="true"]').focus();
+  }
+
+  function chooseSort(value) {
+    state.sort = value;
+    sortValue.textContent = SORT_OPTIONS.find(([key]) => key === value)[1];
+    sortOptions.querySelectorAll('[role="option"]').forEach((option) => {
+      option.setAttribute('aria-selected', String(option.dataset.sort === value));
+    });
+    closeSortMenu(true);
+    render();
+  }
+
+  sortTrigger.addEventListener('click', () => {
+    if (sortOptions.hidden) openSortMenu();
+    else closeSortMenu();
+  });
+  sortTrigger.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      openSortMenu(true);
+    }
+  });
+  sortOptions.addEventListener('click', (e) => {
+    const option = e.target.closest('[data-sort]');
+    if (option) chooseSort(option.dataset.sort);
+  });
+  sortOptions.addEventListener('keydown', (e) => {
+    const options = [...sortOptions.querySelectorAll('[role="option"]')];
+    const index = options.indexOf(document.activeElement);
+    let nextIndex = index;
+    if (e.key === 'ArrowDown') nextIndex = (index + 1) % options.length;
+    else if (e.key === 'ArrowUp') nextIndex = (index - 1 + options.length) % options.length;
+    else if (e.key === 'Home') nextIndex = 0;
+    else if (e.key === 'End') nextIndex = options.length - 1;
+    else if (e.key === 'Escape') {
+      e.preventDefault();
+      closeSortMenu(true);
+      return;
+    } else return;
+    e.preventDefault();
+    options[nextIndex].focus();
+  });
+  document.addEventListener('pointerdown', (e) => {
+    if (!sortControl.contains(e.target)) closeSortMenu();
+  });
 
   function syncUrl() {
     const next = new URLSearchParams(location.search);
@@ -62,7 +134,6 @@ mountChrome('shop');
     syncUrl();
     render();
   });
-  $('#sort').addEventListener('change', (e) => { state.sort = e.target.value; render(); });
   $('#max-price').addEventListener('input', (e) => { state.max = Number(e.target.value) || 0; render(); });
 
   render();

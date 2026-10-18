@@ -21,16 +21,15 @@
         <div class="filter-cats" id="filter-cats"></div>
         <div class="label mt-12">Condition</div>
         <div class="chips" id="filter-condition"></div>
-        <label class="field mt-12">
+        <div class="field mt-12">
           <span>Sort by</span>
-          <select id="sort">
-            <option value="popular">Most popular</option>
-            <option value="low">Price: low to high</option>
-            <option value="high">Price: high to low</option>
-            <option value="discount">Biggest discount</option>
-            <option value="rating">Top rated</option>
-          </select>
-        </label>
+          <div class="sort-control" id="sort-control">
+            <button class="sort-trigger" id="sort-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="sort-options">
+              <span id="sort-value">Most popular</span><span class="sort-chevron" aria-hidden="true"></span>
+            </button>
+            <div class="sort-options" id="sort-options" role="listbox" aria-label="Sort products" hidden></div>
+          </div>
+        </div>
         <label class="field">
           <span>Maximum price (₦)</span>
           <input id="max-price" type="number" min="0" step="1000" inputmode="numeric" placeholder="Any price">
