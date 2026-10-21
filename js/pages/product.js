@@ -38,13 +38,12 @@ document.body.classList.add('product-detail-page');
       <div class="gallery">
         <div class="pdp-media" id="pdp-media">
           ${media.length ? `<img id="pdp-img" src="${esc(media[0].src)}" alt="${esc(p.name)}">` : productThumb(p, 120)}
-          ${off && !biz ? `<span class="badge badge-off">-${off}%</span>` : ''}
           <button class="fav-btn fav-lg" type="button" data-fav="${esc(p.id)}" aria-pressed="${Store.isFav(p.id)}" aria-label="Save ${esc(p.name)}">${icon('heart', 22)}</button>
         </div>
-        ${media.length > 1 || biz ? `
+        ${media.length > 1 || (biz && isCustomizable(p)) ? `
           <div class="gallery-thumbs">
             ${media.map((m, i) => `<button type="button" data-photo="${esc(m.src)}" aria-pressed="${i === 0}" aria-label="${m.gif ? 'Moving view' : 'Photo ' + (i + 1)}"${m.gif ? ' class="is-gif"' : ''}><img src="${esc(m.src)}" alt="">${m.gif ? `<span>${icon('play', 22)}</span>` : ''}</button>`).join('')}
-            ${biz ? `<button class="gallery-customize" id="custom-btn" type="button" aria-label="Customize ${esc(p.name)} with your brand" title="Customize with your brand" ${out ? 'disabled' : ''}>${icon('plus', 24)}</button>` : ''}
+            ${biz && isCustomizable(p) ? `<button class="gallery-customize" id="custom-btn" type="button" aria-label="Customize ${esc(p.name)} with your brand" title="Customize with your brand" ${out ? 'disabled' : ''}>${icon('plus', 24)}</button>` : ''}
           </div>` : ''}
       </div>
 
@@ -96,18 +95,26 @@ document.body.classList.add('product-detail-page');
           <button class="btn btn-outline" id="add-btn" type="button" ${out ? 'disabled' : ''}>${icon('cart', 18)} Add to cart</button>
           <button class="btn btn-primary" id="buy-btn" type="button" ${out ? 'disabled' : ''}>Buy now ${icon('arrowRight', 18, 'ic-arrow')}</button>
         </div>
+        <div>
+          <h2>About this item</h2>
+          <p class="mt-12">${esc(p.desc)}</p>
+        </div>
         <ul class="facts">
           <li>${icon('truck', 18)}<span>Ships from China, arrives in about ${esc(p.ship || '7-15')} days. <a href="orders.html">Track every step</a>.</span></li>
           <li>${icon('check', 18)}<span>Free delivery on orders above ${money(APP.freeShippingFrom)}</span></li>
           <li>${icon('shield', 18)}<span>Pay with your naira wallet or on delivery</span></li>
           ${biz ? `<li>${icon('chat', 18)}<span>Questions? <a href="business.html#agent">Ask your agent</a> about this product.</span></li>` : ''}
         </ul>
-        <div>
-          <h2>About this item</h2>
-          <p class="mt-12">${esc(p.desc)}</p>
-        </div>
       </div>
-    </div>`;
+    </div>
+
+    <section class="card section" id="reviews-section" aria-labelledby="reviews-h">
+      <div class="row spread">
+        <h2 id="reviews-h">Reviews</h2>
+        <button type="button" class="btn btn-outline btn-sm" id="review-btn">${icon('star', 16)} Write a review</button>
+      </div>
+      <div id="reviews-list" class="mt-12"></div>
+    </section>`;
 
   /* gallery: switch photo, and zoom towards the pointer on hover */
   const mediaBox = $('#pdp-media');
@@ -160,7 +167,52 @@ document.body.classList.add('product-detail-page');
     flyToCart(mainImg);
   });
   $('#buy-btn').addEventListener('click', () => { if (add()) location.href = 'checkout.html'; });
-  if (biz) $('#custom-btn').addEventListener('click', () => customiser());
+  if (biz && isCustomizable(p)) $('#custom-btn').addEventListener('click', () => customiser());
+
+  /* ---------- reviews ---------- */
+  function renderReviews() {
+    const list = Store.reviews(p.id);
+    $('#reviews-list').innerHTML = list.length
+      ? list.map((r) => `
+        <div class="review">
+          <div class="row spread"><b>${esc(r.userName)}</b><span class="rating">${icon('star', 14)} ${r.rating}</span></div>
+          <p class="small muted mt-12">${formatDate(r.at)}</p>
+          ${r.text ? `<p class="mt-12">${esc(r.text)}</p>` : ''}
+        </div>`).join('')
+      : '<p class="muted">No reviews yet. Be the first to review this product.</p>';
+  }
+  renderReviews();
+
+  $('#review-btn').addEventListener('click', () => {
+    if (!user) { toast('Sign in to write a review', 'error'); location.href = 'login.html'; return; }
+    let stars = 0;
+    const dlg = openDialog(`Review ${p.name}`, `
+      <form id="review-form" novalidate>
+        <div class="field">
+          <span>Your rating</span>
+          <div class="star-pick" id="star-pick" role="radiogroup" aria-label="Rating">
+            ${[1, 2, 3, 4, 5].map((n) => `<button type="button" data-star="${n}" aria-label="${n} star${n > 1 ? 's' : ''}" aria-pressed="false">${icon('star', 24)}</button>`).join('')}
+          </div>
+        </div>
+        <label class="field mt-12"><span>Your review (optional)</span><textarea name="text" rows="3" maxlength="500" placeholder="What did you think?"></textarea></label>
+        <div class="row mt-16"><button class="btn btn-primary" type="submit">Post review</button></div>
+      </form>`);
+    const pick = $('#star-pick', dlg);
+    pick.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-star]');
+      if (!btn) return;
+      stars = Number(btn.dataset.star);
+      $$('[data-star]', pick).forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.star) <= stars)));
+    });
+    $('#review-form', dlg).addEventListener('submit', (e) => {
+      e.preventDefault();
+      const res = Store.addReview(p.id, { rating: stars, text: new FormData(e.target).get('text') });
+      if (!res.ok) return toast(res.error, 'error');
+      dlg.close();
+      toast('Thanks for your review');
+      renderReviews();
+    });
+  });
 
   /* ---------- logo customiser ---------- */
   // The buyer places their logo on the product photo, picks a colour and says how many
@@ -327,13 +379,13 @@ document.body.classList.add('product-detail-page');
     return '#' + best[0].split(',').map((v) => Math.min(255, Number(v)).toString(16).padStart(2, '0')).join('');
   }
 
-  const related = Store.products().filter((x) => x.cat === p.cat && x.id !== p.id).slice(0, 5);
+  const related = relatedTo(p, Store.products());
   if (related.length) {
     $('#related').innerHTML = related.map((x, i) => productCard(x, i)).join('');
     $('#related-section').hidden = false;
   }
 
-  if (biz && pageParams.get('customize') === '1') {
+  if (biz && isCustomizable(p) && pageParams.get('customize') === '1') {
     pageParams.delete('customize');
     history.replaceState(null, '', location.pathname + (pageParams.toString() ? '?' + pageParams : ''));
     customiser();

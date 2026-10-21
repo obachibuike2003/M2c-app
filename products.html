@@ -17,10 +17,14 @@
     <h1 class="page-title" id="list-title">All products</h1>
     <div class="listing">
       <aside class="card filters" aria-label="Filters">
-        <div class="label">Category</div>
+        <div class="label" id="filter-cats-label">Category</div>
         <div class="filter-cats" id="filter-cats"></div>
+        <div class="label mt-12" id="filter-subs-label" hidden></div>
+        <div class="filter-cats" id="filter-subs" hidden></div>
         <div class="label mt-12">Condition</div>
         <div class="chips" id="filter-condition"></div>
+        <div class="label mt-12" id="filter-custom-label" hidden>For my brand</div>
+        <div class="chips" id="filter-custom" hidden></div>
         <div class="field mt-12">
           <span>Sort by</span>
           <div class="sort-control" id="sort-control">

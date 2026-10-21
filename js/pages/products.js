@@ -10,13 +10,27 @@ mountChrome('shop', { hideCategories: true });
     ['discount', 'Biggest discount'],
     ['rating', 'Top rated']
   ];
+  const biz = Store.isBusiness();
   const state = {
     q: (params.get('q') || '').trim().toLowerCase(),
     cat: categories().some((c) => c.id === params.get('cat')) ? params.get('cat') : '',
+    sub: params.get('sub') || '',
     condition: ['new', 'used'].includes(params.get('condition')) ? params.get('condition') : '',
+    custom: biz && params.get('custom') === '1',
     sort: 'popular',
     max: 0
   };
+
+  // Subcategories (e.g. car brands, phone brands) are whatever distinct `sub` values
+  // exist among a category's own products, so a new product auto-creates its subcategory.
+  function subsFor(catId) {
+    const seen = [];
+    Store.products().forEach((p) => {
+      if (p.cat === catId && p.sub && !seen.includes(p.sub)) seen.push(p.sub);
+    });
+    return seen;
+  }
+  if (!subsFor(state.cat).includes(state.sub)) state.sub = '';
 
   const sorters = {
     popular: (a, b) => (b.sold || 0) - (a.sold || 0),
@@ -28,6 +42,12 @@ mountChrome('shop', { hideCategories: true });
 
   const chip = (attr, value, label, on) =>
     `<button type="button" class="chip${on ? ' is-on' : ''}" data-${attr}="${esc(value)}" aria-pressed="${on}">${esc(label)}</button>`;
+
+  if (biz) {
+    $('#filter-custom-label').hidden = false;
+    $('#filter-custom').hidden = false;
+    $('#filter-custom').innerHTML = chip('custom', '1', 'Customizable only', state.custom);
+  }
 
   const sortTrigger = $('#sort-trigger');
   const sortValue = $('#sort-value');
@@ -96,22 +116,40 @@ mountChrome('shop', { hideCategories: true });
 
   function syncUrl() {
     const next = new URLSearchParams(location.search);
-    ['cat', 'condition'].forEach((k) => { if (state[k]) next.set(k, state[k]); else next.delete(k); });
+    ['cat', 'sub', 'condition'].forEach((k) => { if (state[k]) next.set(k, state[k]); else next.delete(k); });
+    if (state.custom) next.set('custom', '1'); else next.delete('custom');
     history.replaceState(null, '', 'products.html' + (next.toString() ? '?' + next : ''));
   }
 
   function render() {
+    // Arriving already filtered to one category (from the home page's category icons) makes
+    // re-picking it here redundant, so the chip row only shows while browsing "All products".
+    $('#filter-cats-label').hidden = !!state.cat;
+    $('#filter-cats').hidden = !!state.cat;
     $('#filter-cats').innerHTML = [{ id: '', name: 'All' }, ...categories()].map((c) => chip('cat', c.id, c.name, state.cat === c.id)).join('');
+
+    const subs = subsFor(state.cat);
+    $('#filter-subs-label').hidden = subs.length < 2;
+    $('#filter-subs').hidden = subs.length < 2;
+    if (subs.length >= 2) {
+      $('#filter-subs-label').textContent = 'Subcategory';
+      $('#filter-subs').innerHTML = [{ id: '', name: 'All' }, ...subs.map((s) => ({ id: s, name: s }))]
+        .map((s) => chip('sub', s.id, s.name, state.sub === s.id)).join('');
+    }
+
     $('#filter-condition').innerHTML = CONDITIONS.map(([id, name]) => chip('condition', id, name, state.condition === id)).join('');
+    if (biz) $('#filter-custom').innerHTML = chip('custom', '1', 'Customizable only', state.custom);
 
     const list = Store.products()
       .filter((p) => !state.cat || p.cat === state.cat)
+      .filter((p) => !state.sub || p.sub === state.sub)
       .filter((p) => !state.condition || (p.condition || 'new') === state.condition)
+      .filter((p) => !state.custom || isCustomizable(p))
       .filter((p) => !state.q || (p.name + ' ' + p.desc + ' ' + categoryOf(p.cat).name).toLowerCase().includes(state.q))
       .filter((p) => !state.max || p.price <= state.max)
       .sort(sorters[state.sort]);
 
-    const title = state.q ? `Results for "${state.q}"` : state.cat ? categoryOf(state.cat).name : 'All products';
+    const title = state.q ? `Results for "${state.q}"` : state.cat ? categoryOf(state.cat).name + (state.sub ? ` · ${state.sub}` : '') : 'All products';
     $('#list-title').textContent = state.condition === 'used' ? `${title === 'All products' ? 'Used products' : title + ', used'}` : title;
     $('#result-count').textContent = `${list.length} ${list.length === 1 ? 'product' : 'products'}${Store.isBusiness() ? ' · prices shown are wholesale, per piece' : ''}`;
     $('#results').innerHTML = list.length
@@ -124,6 +162,14 @@ mountChrome('shop', { hideCategories: true });
     const btn = e.target.closest('[data-cat]');
     if (!btn) return;
     state.cat = btn.dataset.cat;
+    state.sub = '';
+    syncUrl();
+    render();
+  });
+  $('#filter-subs').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-sub]');
+    if (!btn) return;
+    state.sub = btn.dataset.sub;
     syncUrl();
     render();
   });
@@ -131,6 +177,13 @@ mountChrome('shop', { hideCategories: true });
     const btn = e.target.closest('[data-condition]');
     if (!btn) return;
     state.condition = btn.dataset.condition;
+    syncUrl();
+    render();
+  });
+  if (biz) $('#filter-custom').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-custom]');
+    if (!btn) return;
+    state.custom = !state.custom;
     syncUrl();
     render();
   });

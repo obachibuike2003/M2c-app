@@ -1,7 +1,6 @@
 mountChrome('home', { hideCategories: true });
 
 (function () {
-  const rates = Store.rates();
   const products = Store.products();
   const user = Store.currentUser();
 
@@ -10,11 +9,7 @@ mountChrome('home', { hideCategories: true });
   $$('[data-arrow]').forEach((el) => { el.insertAdjacentHTML('beforeend', icon('arrowRight', 18)); });
   $('#slide-prev').innerHTML = icon('arrowLeft');
   $('#slide-next').innerHTML = icon('arrowRight');
-  $('#deals-tag').insertAdjacentHTML('afterbegin', icon('zap', 14));
   $('#cats-all').insertAdjacentHTML('beforeend', icon('chevron', 16));
-  $('#tile-rate').innerHTML = `¥1 = ${money(rates.CNY.buy)} today ${icon('arrowRight', 16)}`;
-  const phones = products.filter((p) => p.cat === 'phones');
-  $('#phones-from').textContent = phones.length ? money(Math.min(...phones.map((p) => p.price))) : 'China';
 
   /* ---------- hero slider ---------- */
   (function slider() {
@@ -98,7 +93,7 @@ mountChrome('home', { hideCategories: true });
 
   showcase();
 
-  /* ---------- perks, categories, rates ---------- */
+  /* ---------- perks, categories ---------- */
   $('#perks').innerHTML = [
     ['truck', 'Shipped from China', `Free above ${money(APP.freeShippingFrom)}`],
     ['shield', 'Buyer protection', 'Refund to your wallet'],
@@ -111,39 +106,6 @@ mountChrome('home', { hideCategories: true });
       <span class="bubble" style="--h:${c.hue}">${categoryArt(c, 34)}</span>
       ${esc(c.name)}
     </a>`).join('');
-
-  $('#rate-tiles').innerHTML = ['CNY', 'USDT', 'BTC', 'ETH'].filter((c) => rates[c]).map((c) => `
-    <a class="rate-tile" href="exchange.html?asset=${c}">
-      <span class="coin-dot">${c}</span>
-      <small>${esc(rates[c].name)}</small>
-      <b>${money(rates[c].buy)}</b>
-    </a>`).join('');
-
-  /* ---------- flash deals ---------- */
-  const deals = [...products].filter((p) => p.stock > 0).sort((a, b) => discountOf(b) - discountOf(a)).slice(0, 10);
-  $('#deals').innerHTML = deals.map((p, i) => productCard(p, i, true)).join('');
-
-  // Countdown runs to midnight; each box pops when its number changes.
-  const countdown = $('#countdown');
-  countdown.innerHTML = '<span class="lbl">Ends in</span><b data-u="h">00</b><i>:</i><b data-u="m">00</b><i>:</i><b data-u="s">00</b>';
-  function tick() {
-    const now = new Date();
-    const end = new Date(now);
-    end.setHours(24, 0, 0, 0);
-    const s = Math.max(0, Math.floor((end - now) / 1000));
-    const parts = { h: Math.floor(s / 3600), m: Math.floor((s % 3600) / 60), s: s % 60 };
-    Object.entries(parts).forEach(([unit, n]) => {
-      const el = $(`[data-u="${unit}"]`, countdown);
-      const text = String(n).padStart(2, '0');
-      if (el.textContent === text) return;
-      el.textContent = text;
-      el.classList.remove('tick');
-      void el.offsetWidth;
-      el.classList.add('tick');
-    });
-  }
-  tick();
-  setInterval(tick, 1000);
 
   /* ---------- recommended, with category chips ---------- */
   const PAGE = 15;

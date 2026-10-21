@@ -77,6 +77,27 @@ const categoryOf = (id) => categories().find((c) => c.id === id) || { id, name: 
 // Category picture, or its icon when there is no picture.
 const categoryArt = (c, size = 30) => (safeImage(c.img) ? `<img src="${esc(c.img)}" alt="" loading="lazy">` : icon(c.icon || 'box', size));
 const discountOf = (p) => (p.oldPrice > p.price ? Math.round((1 - p.price / p.oldPrice) * 100) : 0);
+// Branded, pre-made goods (name-brand electronics, vehicles) can't carry a buyer's own logo.
+const UNBRANDABLE_NAME = /\b(apple|samsung|huawei|oppo|realme|vivo|lenovo|beats|amazon|nokia|xiaomi|tecno|infinix|sony|jbl|bose|hp|dell|asus|nike|adidas|puma|chrysler|dodge|toyota|honda|ford|hyundai|kia|mercedes|bmw|lexus|jeep|nissan)\b/i;
+const isCustomizable = (p) => p.cat !== 'cars' && !UNBRANDABLE_NAME.test(p.name);
+
+// "You may also like": rank by shared words in the name (same brand/kind of item) before
+// falling back to same category, so a Beats earphone surfaces other earphones first,
+// not just whatever else lives in the broad "Electronics" category.
+function relatedTo(p, all, limit = 5) {
+  // Generic model-name filler words (Plus, Pro, GT...) match across totally unrelated
+  // products, so they're excluded rather than treated as a real similarity signal.
+  const STOP = new Set(['plus', 'pro', 'max', 'mini', 'lite', 'series', 'touring', 'sxt', 'gt', 'edition', 'note', 'the', 'and', 'with', 'for']);
+  const words = (s) => new Set(String(s).toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !STOP.has(w)));
+  const base = words(p.name);
+  return all
+    .filter((x) => x.id !== p.id)
+    .map((x) => ({ x, shared: [...words(x.name)].filter((w) => base.has(w)).length, sameCat: x.cat === p.cat }))
+    .filter((e) => e.shared > 0 || e.sameCat)
+    .sort((a, b) => (b.shared * 3 + b.sameCat) - (a.shared * 3 + a.sameCat) || (b.x.sold || 0) - (a.x.sold || 0))
+    .slice(0, limit)
+    .map((e) => e.x);
+}
 const compact = (n) => (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : String(n));
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -113,11 +134,10 @@ function productCard(p, i = 0, deal = false) {
       <div class="thumb-wrap">
         <a class="thumb" href="${href}" tabindex="-1" aria-hidden="true">
           ${productThumb(p)}
-          ${off ? `<span class="badge badge-off">-${off}%</span>` : ''}
           ${p.condition === 'used' ? '<span class="badge badge-used">Used</span>' : ''}
         </a>
         <button class="fav-btn" type="button" data-fav="${esc(p.id)}" aria-pressed="${fav}" aria-label="Save ${esc(p.name)}">${icon('heart', 18)}</button>
-        ${biz ? `<button class="customize-fab" type="button" data-customize="${esc(p.id)}" aria-label="Customize ${esc(p.name)} with your brand" title="Customize with your brand">${icon('plus', 20)}</button>` : ''}
+        ${biz && isCustomizable(p) ? `<button class="customize-fab" type="button" data-customize="${esc(p.id)}" aria-label="Customize ${esc(p.name)} with your brand" title="Customize with your brand">${icon('plus', 20)}</button>` : ''}
         <button class="add-fab" type="button" data-add="${esc(p.id)}" aria-label="${out ? 'Out of stock' : `Add ${biz ? min + ' of ' : ''}${esc(p.name)} to cart`}" ${out ? 'disabled' : ''}>${icon(out ? 'x' : 'plus', 20)}</button>
       </div>
       <div class="product-body">
@@ -404,9 +424,11 @@ function mountChrome(active, { hideCategories = false } = {}) {
   const biz = user && user.mode === 'business';
   const rates = Store.rates();
   const q = new URLSearchParams(location.search).get('q') || '';
+  const urlCat = new URLSearchParams(location.search).get('cat') || '';
+  const searchCat = active === 'shop' && categories().some((c) => c.id === urlCat) ? urlCat : '';
   const unseen = biz ? Store.unseenFor(user.id, 'user') : 0;
   const link = (href, ic, label, key, mobile = false, extra = '') =>
-    `<a href="${href}" class="hdr-link${mobile ? '' : ' hide-m'}${active === key ? ' is-active' : ''}"${active === key ? ' aria-current="page"' : ''}>${icon(ic, 22)}<span>${label}</span>${extra}</a>`;
+    `<a href="${href}" class="hdr-link${mobile ? ' hide-s' : ' hide-m'}${active === key ? ' is-active' : ''}"${active === key ? ' aria-current="page"' : ''}>${icon(ic, 22)}<span>${label}</span>${extra}</a>`;
 
   const tickerItems = [
     `<span class="ticker-item">${icon('truck', 16)} Free delivery above <b>${money(APP.freeShippingFrom)}</b></span>`,
@@ -429,10 +451,16 @@ function mountChrome(active, { hideCategories = false } = {}) {
           <button type="button" data-switch-mode="personal" aria-pressed="${!biz}">Personal</button>
           <button type="button" data-switch-mode="business" aria-pressed="${!!biz}">Business</button>
         </div>
+        ${active === 'home' || active === 'shop' ? `
         <form class="search" action="products.html" role="search">
-          <input type="search" name="q" value="${esc(q)}" placeholder="Search phones, cars, raw materials" aria-label="Search products">
+          ${searchCat ? `<input type="hidden" name="cat" value="${esc(searchCat)}">` : ''}
+          <input type="search" name="q" value="${esc(q)}" placeholder="${searchCat ? `Search in ${esc(categoryOf(searchCat).name)}` : 'Search phones, cars, raw materials'}" aria-label="Search products">
+          <label class="search-photo" aria-label="Search by photo">
+            ${icon('camera', 20)}
+            <input type="file" accept="image/*" capture="environment" data-photo-search hidden>
+          </label>
           <button type="submit" aria-label="Search">${icon('search')}</button>
-        </form>
+        </form>` : ''}
         <nav class="hdr-actions" aria-label="Main">
           ${biz ? link('business.html', 'briefcase', 'Business', 'business', false, unseen ? `<b class="count">${unseen}</b>` : '') : link('exchange.html', 'swap', 'Exchange', 'exchange')}
           ${link('orders.html', 'box', 'Orders', 'orders')}
@@ -440,7 +468,7 @@ function mountChrome(active, { hideCategories = false } = {}) {
           ${user
             ? link('account.html', 'user', esc(user.name.split(' ')[0]), 'account', true)
             : link('login.html', 'user', 'Sign in', 'login', true)}
-          <a href="cart.html" class="hdr-link${active === 'cart' ? ' is-active' : ''}" data-cart-target>
+          <a href="cart.html" class="hdr-link hide-s${active === 'cart' ? ' is-active' : ''}" data-cart-target>
             ${icon('cart', 22)}<span>Cart</span><b class="count" data-cart-count hidden>0</b>
           </a>
         </nav>
@@ -536,6 +564,14 @@ function mountChrome(active, { hideCategories = false } = {}) {
     toast(qty > 1 ? `Added ${qty} to cart` : 'Added to cart');
     const card = btn.closest('.product');
     flyToCart(card && $('.thumb img', card));
+  });
+
+  document.addEventListener('change', (e) => {
+    // Photo search: snap or upload a product photo to find similar items.
+    const input = e.target.closest('[data-photo-search]');
+    if (!input || !input.files[0]) return;
+    toast('Looking for products like that photo...');
+    location.href = 'products.html?visual=1';
   });
 
   // Page scripts render after this runs, so wait for them before wiring up reveals.

@@ -196,6 +196,25 @@ const Store = (() => {
 
   const isFav = (productId) => ((currentUser() || {}).favs || []).includes(productId);
 
+  /* ---------- reviews ---------- */
+
+  function reviews(productId) {
+    const all = read('reviews', {});
+    return (all[productId] || []).slice().sort((a, b) => b.at - a.at);
+  }
+
+  function addReview(productId, { rating, text }) {
+    const user = currentUser();
+    if (!user) return { ok: false, error: 'Please sign in first.' };
+    const stars = Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
+    if (!stars) return { ok: false, error: 'Pick a star rating.' };
+    const all = read('reviews', {});
+    const list = all[productId] || [];
+    list.push({ id: uid('rv_'), userName: user.name.split(' ')[0], rating: stars, text: String(text || '').trim(), at: Date.now() });
+    all[productId] = list;
+    return write('reviews', all) ? { ok: true } : { ok: false, error: FULL };
+  }
+
   /* ---------- agents and chat ---------- */
 
   const agents = () => read('agents', []);
@@ -598,7 +617,7 @@ const Store = (() => {
   return {
     resetDemo, flag, setFlag, users, currentUser, signup, login, logout, updateUser,
     mode, isBusiness, setMode, businessType, submitVerification, setVerification, saveBrand,
-    toggleFav, isFav,
+    toggleFav, isFav, reviews, addReview,
     agents, agent, saveAgent, deleteAgent, pickAgent, messages, threadOf, sendMessage, markSeen, unseenFor,
     txns, userTxns, fundWallet, requestPayout, resolvePayout,
     rates, saveRates, quote, exchange,

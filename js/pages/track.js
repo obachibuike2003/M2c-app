@@ -16,6 +16,12 @@ mountChrome('orders');
   const cancelled = o.status === 'Cancelled';
   const a = user.agentId ? Store.agent(user.agentId) : null;
 
+  // A simple, honest ETA: order date plus the slowest shipping estimate among its items.
+  const shipDays = o.items.map((it) => Store.product(it.id)).filter(Boolean)
+    .map((p) => Number((String(p.ship || '').match(/(\d+)\s*-\s*(\d+)/) || [])[2]) || 15);
+  const etaDays = shipDays.length ? Math.max(...shipDays) : 15;
+  const eta = new Date(o.createdAt + etaDays * 86400000);
+
   root.innerHTML = `
     <p class="small muted"><a href="orders.html">My orders</a> / ${esc(o.id)}</p>
     <div class="two-col mt-12">
@@ -24,7 +30,12 @@ mountChrome('orders');
           <div><span class="kicker">Order tracker</span><h1>${esc(o.id)}</h1></div>
           ${statusPill(o.status)}
         </div>
-        ${cancelled ? `<p class="notice mt-16">This order was cancelled${o.cancelledAt ? ' on ' + formatDate(o.cancelledAt) : ''}.${o.pay === 'wallet' ? ' Your payment was returned to your wallet.' : ''}</p>` : ''}
+        ${cancelled ? `<p class="notice mt-16">This order was cancelled${o.cancelledAt ? ' on ' + formatDate(o.cancelledAt) : ''}.${o.pay === 'wallet' ? ' Your payment was returned to your wallet.' : ''}</p>` : `
+        <div class="track-now mt-16">
+          <p class="small muted">Current status</p>
+          <p class="track-now-text">${esc(TRACK_STAGES[o.stage].text)}</p>
+          ${o.stage < TRACK_STAGES.length - 1 ? `<p class="small muted mt-12">Estimated delivery <b>${eta.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}</b></p>` : ''}
+        </div>`}
         <ol class="timeline mt-16">
           ${TRACK_STAGES.map((s, i) => {
             const state = cancelled ? (i <= o.stage ? 'done' : 'off') : i < o.stage ? 'done' : i === o.stage ? 'now' : 'next';

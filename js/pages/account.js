@@ -48,13 +48,6 @@ mountChrome('account');
           </form>` : ''}
       </section>
 
-      ${biz ? `
-        <section class="card section agent-card">
-          <span class="avatar">${esc((a ? a.name : '?').charAt(0))}</span>
-          <div><span class="kicker">Your agent</span><h2>${a ? esc(a.name) : 'Being assigned'}</h2><p class="small muted">${a ? 'Helps you with bulk orders, custom branding and delivery.' : 'We will assign an agent to you shortly.'}</p></div>
-          ${a ? `<div class="row"><a class="btn btn-primary btn-sm" href="business.html#agent">${icon('chat', 16)} Chat</a><a class="btn btn-outline btn-sm" href="${esc(waLink(a.whatsapp, `Hi ${a.name}, this is ${user.name} (${user.business.name}) on ${APP.name}.`))}" target="_blank" rel="noopener">${icon('whatsapp', 16)} WhatsApp</a></div>` : ''}
-        </section>` : ''}
-
       <section class="card section" aria-labelledby="verify-h">
         <div class="row spread"><h2 id="verify-h">Identity check</h2>${statusPill(v === 'none' ? 'Not verified' : v)}</div>
         <p class="muted mt-12">${VERIFY_TEXT[v]}</p>
@@ -70,8 +63,16 @@ mountChrome('account');
           <a href="wallet.html">${icon('wallet', 22)}<span>Wallet</span></a>
           <a href="exchange.html">${icon('swap', 22)}<span>Exchange</span></a>
           ${biz ? `<a href="business.html">${icon('briefcase', 22)}<span>Business hub</span></a>` : `<a href="products.html?condition=used">${icon('tag', 22)}<span>Used products</span></a>`}
+          <a href="mailto:${esc(APP.supportEmail)}">${icon('headset', 22)}<span>Customer service</span></a>
         </div>
       </section>
+
+      ${biz ? `
+        <section class="card section agent-card">
+          <span class="avatar">${esc((a ? a.name : '?').charAt(0))}</span>
+          <div><span class="kicker">Your agent</span><h2>${a ? esc(a.name) : 'Being assigned'}</h2><p class="small muted">${a ? 'Helps you with bulk orders, custom branding and delivery.' : 'We will assign an agent to you shortly.'}</p></div>
+          ${a ? `<div class="row"><a class="btn btn-primary btn-sm" href="business.html#agent">${icon('chat', 16)} Chat</a><a class="btn btn-outline btn-sm" href="${esc(waLink(a.whatsapp, `Hi ${a.name}, this is ${user.name} (${user.business.name}) on ${APP.name}.`))}" target="_blank" rel="noopener">${icon('whatsapp', 16)} WhatsApp</a></div>` : ''}
+        </section>` : ''}
 
       <section class="section" aria-labelledby="fav-h">
         <div class="section-head"><h2 id="fav-h">Saved products</h2></div>
