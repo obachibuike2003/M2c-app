@@ -52,7 +52,16 @@ const ICONS = {
   send: '<path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4z"/>',
   wand: '<path d="m4 20 11-11"/><path d="m13 7 2-2 4 4-2 2z"/><path d="M6 3v3M4.5 4.5h3M19 14v3M17.5 15.5h3"/>',
   whatsapp: '<path d="M20 11.5A8.5 8.5 0 0 1 7.6 19L3 20l1.1-4.4A8.5 8.5 0 1 1 20 11.5z"/><path d="M9 8.5c0 3.5 2.5 6.5 6.5 6.5l1-1.5-2-1-1 1c-1.2-.5-2.3-1.6-2.8-2.8l1-1-1-2z"/>',
-  tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.5"/>'
+  tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+  bell: '<path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
+  copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/>',
+  type: '<path d="M4 6h16"/><path d="M12 6v14"/>',
+  image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 16-5-5-4 4-2-2-6 6"/>',
+  edit: '<path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/>',
+  layers: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
+  folder: '<path d="M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>',
+  store: '<path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v10h16V9"/><path d="M9 19v-5h6v5"/>',
+  book: '<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/>'
 };
 
 function icon(name, size = 20, cls = '') {
@@ -99,6 +108,28 @@ function relatedTo(p, all, limit = 5) {
     .map((e) => e.x);
 }
 const compact = (n) => (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : String(n));
+
+// The most common strong colour in a logo image, ignoring white, black and see-through pixels.
+// Used to match a product's tint to an uploaded logo in the customiser.
+function logoColour(img) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 40;
+  const x = c.getContext('2d');
+  x.drawImage(img, 0, 0, 40, 40);
+  const data = x.getImageData(0, 0, 40, 40).data;
+  const buckets = {};
+  for (let i = 0; i < data.length; i += 4) {
+    const [r, g, b, a] = [data[i], data[i + 1], data[i + 2], data[i + 3]];
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    if (a < 128 || max - min < 40 || max < 50) continue;
+    const key = [r, g, b].map((v) => Math.round(v / 32) * 32).join(',');
+    buckets[key] = (buckets[key] || 0) + 1;
+  }
+  const best = Object.entries(buckets).sort((a, b) => b[1] - a[1])[0];
+  if (!best) return '#111216';
+  return '#' + best[0].split(',').map((v) => Math.min(255, Number(v)).toString(16).padStart(2, '0')).join('');
+}
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function formatDate(ts) {
@@ -457,7 +488,7 @@ function mountChrome(active, { hideCategories = false } = {}) {
           <input type="search" name="q" value="${esc(q)}" placeholder="${searchCat ? `Search in ${esc(categoryOf(searchCat).name)}` : 'Search phones, cars, raw materials'}" aria-label="Search products">
           <label class="search-photo" aria-label="Search by photo">
             ${icon('camera', 20)}
-            <input type="file" accept="image/*" capture="environment" data-photo-search hidden>
+            <input type="file" accept="image/*" data-photo-search hidden>
           </label>
           <button type="submit" aria-label="Search">${icon('search')}</button>
         </form>` : ''}
@@ -508,7 +539,7 @@ function mountChrome(active, { hideCategories = false } = {}) {
           <h3>Help</h3>
           <a href="exchange.html">Exchange</a>
           <a href="wallet.html">Wallet</a>
-          <a href="mailto:${esc(APP.supportEmail)}">${esc(APP.supportEmail)}</a>
+          <a href="support.html">Customer service</a>
         </div>
       </div>
       <div class="container ftr-note">Demo build: payments, balances and exchange rates are simulated and stored only in this browser.</div>
@@ -550,7 +581,7 @@ function mountChrome(active, { hideCategories = false } = {}) {
 
     const customize = e.target.closest('[data-customize]');
     if (customize) {
-      location.href = `product.html?id=${encodeURIComponent(customize.dataset.customize)}&customize=1`;
+      location.href = `studio.html?id=${encodeURIComponent(customize.dataset.customize)}`;
       return;
     }
 

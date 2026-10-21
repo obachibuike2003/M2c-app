@@ -3,6 +3,7 @@ const APP = {
   name: 'Easy2buy',
   tagline: 'Shop China. Pay in Naira.',
   supportEmail: 'support@example.com',
+  supportWhatsapp: '2348000000000',
   shippingFee: 2500,
   freeShippingFrom: 50000
 };
