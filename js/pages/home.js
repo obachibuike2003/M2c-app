@@ -1,4 +1,4 @@
-mountChrome('home', { hideCategories: true });
+mountChrome('home');
 
 (function () {
   const products = Store.products();

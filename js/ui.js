@@ -449,7 +449,7 @@ function logoHtml(extraClass = '') {
   return `<a class="logo ${extraClass}" href="index.html"><span class="logo-mark" aria-hidden="true">${esc(APP.name.charAt(0))}</span>${esc(APP.name)}</a>`;
 }
 
-function mountChrome(active, { hideCategories = false } = {}) {
+function mountChrome(active) {
   document.title = `${document.title} | ${APP.name}`;
   const user = Store.currentUser();
   const biz = user && user.mode === 'business';
@@ -504,13 +504,6 @@ function mountChrome(active, { hideCategories = false } = {}) {
           </a>
         </nav>
       </div>
-      ${hideCategories ? '' : `<nav class="cat-strip" aria-label="Categories">
-        <div class="container cat-strip-in">
-          <a href="products.html">All products</a>
-          <a href="products.html?condition=used">Used</a>
-          ${categories().map((c) => `<a href="products.html?cat=${encodeURIComponent(c.id)}">${esc(c.name)}</a>`).join('')}
-        </div>
-      </nav>`}
     </header>`;
 
   const tab = (href, ic, label, key, extra = '', attrs = '') =>

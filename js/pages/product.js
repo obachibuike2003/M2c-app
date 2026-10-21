@@ -1,4 +1,4 @@
-mountChrome('shop', { hideCategories: true });
+mountChrome('shop');
 document.body.classList.add('product-detail-page');
 
 (function () {

@@ -161,12 +161,6 @@ main.container { padding-top: 16px; padding-bottom: 40px; min-height: 60vh; }
 .count { position: absolute; top: 0; right: 4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--red); color: #fff; font-size: .68rem; font-weight: 700; line-height: 18px; text-align: center; box-shadow: 0 0 0 2px #fff; }
 .count.bump { animation: bump .5s var(--ease); }
 @keyframes bump { 30% { transform: scale(1.6); } }
-.cat-strip-in { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
-.cat-strip-in::-webkit-scrollbar { display: none; }
-.cat-strip a { position: relative; flex: none; padding: 10px 12px; color: var(--text); font-size: .88rem; font-weight: 600; }
-.cat-strip a::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: 4px; height: 2px; border-radius: 2px; background: var(--red); transform: scaleX(0); transform-origin: left; transition: transform .3s var(--ease); }
-.cat-strip a:hover { color: var(--red-600); text-decoration: none; }
-.cat-strip a:hover::after { transform: scaleX(1); }
 .product-detail-page > .ticker, .product-detail-page > .hdr { display: none; }
 
 /* ---------- mobile bottom nav ---------- */

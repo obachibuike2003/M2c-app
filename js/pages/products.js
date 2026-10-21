@@ -1,4 +1,4 @@
-mountChrome('shop', { hideCategories: true });
+mountChrome('shop');
 
 (function () {
   const params = new URLSearchParams(location.search);
