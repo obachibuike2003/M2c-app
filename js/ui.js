@@ -519,6 +519,7 @@ function mountChrome(active) {
         <div>
           <h3>Shop</h3>
           <a href="products.html">All products</a>
+          <a href="categories.html">All categories</a>
           <a href="products.html?condition=used">Used products</a>
           <a href="orders.html">Track my orders</a>
         </div>
