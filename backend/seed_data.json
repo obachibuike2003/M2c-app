@@ -1,0 +1,1958 @@
+{
+  "categories": [
+    {
+      "id": "raw",
+      "name": "Raw Materials",
+      "icon": "factory",
+      "hue": 25,
+      "img": ""
+    },
+    {
+      "id": "chemicals",
+      "name": "Chemicals",
+      "icon": "flask",
+      "hue": 140,
+      "img": ""
+    },
+    {
+      "id": "phones",
+      "name": "Phones & Tablets",
+      "icon": "phone",
+      "hue": 355,
+      "img": "assets/products/p128-t.webp"
+    },
+    {
+      "id": "electronics",
+      "name": "Electronics",
+      "icon": "monitor",
+      "hue": 215,
+      "img": "assets/products/p101-t.webp"
+    },
+    {
+      "id": "gadgets",
+      "name": "Gadgets",
+      "icon": "cpu",
+      "hue": 250,
+      "img": "assets/products/p105-t.webp"
+    },
+    {
+      "id": "fashion",
+      "name": "Fashion",
+      "icon": "shirt",
+      "hue": 280,
+      "img": "assets/products/p86-t.webp"
+    },
+    {
+      "id": "aesthetics",
+      "name": "Aesthetics & Skin Care",
+      "icon": "sparkle",
+      "hue": 300,
+      "img": "assets/products/p119-t.webp"
+    },
+    {
+      "id": "beauty",
+      "name": "Beauty",
+      "icon": "droplet",
+      "hue": 330,
+      "img": "assets/products/p4-t.webp"
+    },
+    {
+      "id": "furniture",
+      "name": "Furniture",
+      "icon": "sofa",
+      "hue": 35,
+      "img": "assets/products/p12-t.webp"
+    },
+    {
+      "id": "home",
+      "name": "Home & Kitchen",
+      "icon": "cup",
+      "hue": 28,
+      "img": "assets/products/p51-t.webp"
+    },
+    {
+      "id": "bags",
+      "name": "Bags & Shoes",
+      "icon": "bag",
+      "hue": 160,
+      "img": "assets/products/p173-t.webp"
+    },
+    {
+      "id": "watches",
+      "name": "Watches & Jewellery",
+      "icon": "clock",
+      "hue": 45,
+      "img": "assets/products/p193-t.webp"
+    },
+    {
+      "id": "sports",
+      "name": "Sports",
+      "icon": "smile",
+      "hue": 195,
+      "img": "assets/products/p147-t.webp"
+    },
+    {
+      "id": "cars",
+      "name": "Cars & Bikes",
+      "icon": "car",
+      "hue": 5,
+      "img": "assets/products/p169-t.webp"
+    }
+  ],
+  "business_types": [
+    {
+      "id": "fashion",
+      "name": "Fashion & clothing store",
+      "cats": [
+        "fashion",
+        "bags",
+        "watches"
+      ]
+    },
+    {
+      "id": "phones",
+      "name": "Phone & gadget shop",
+      "cats": [
+        "phones",
+        "gadgets",
+        "electronics"
+      ]
+    },
+    {
+      "id": "electronics",
+      "name": "Electronics shop",
+      "cats": [
+        "electronics",
+        "gadgets",
+        "phones"
+      ]
+    },
+    {
+      "id": "beauty",
+      "name": "Beauty, salon & aesthetics",
+      "cats": [
+        "aesthetics",
+        "beauty"
+      ]
+    },
+    {
+      "id": "soap",
+      "name": "Soap, detergent & cosmetics making",
+      "cats": [
+        "chemicals",
+        "raw",
+        "aesthetics"
+      ]
+    },
+    {
+      "id": "packaging",
+      "name": "Plastic & packaging production",
+      "cats": [
+        "raw",
+        "chemicals"
+      ]
+    },
+    {
+      "id": "furniture",
+      "name": "Furniture & interior",
+      "cats": [
+        "furniture",
+        "home"
+      ]
+    },
+    {
+      "id": "home",
+      "name": "Home & kitchen store",
+      "cats": [
+        "home",
+        "furniture",
+        "gadgets"
+      ]
+    },
+    {
+      "id": "supermarket",
+      "name": "Supermarket & provisions",
+      "cats": [
+        "home",
+        "aesthetics",
+        "gadgets"
+      ]
+    },
+    {
+      "id": "sports",
+      "name": "Sports & fitness",
+      "cats": [
+        "sports",
+        "fashion"
+      ]
+    },
+    {
+      "id": "cars",
+      "name": "Car & bike dealer",
+      "cats": [
+        "cars"
+      ]
+    },
+    {
+      "id": "other",
+      "name": "Something else",
+      "cats": []
+    }
+  ],
+  "track_stages": [
+    {
+      "name": "Order placed",
+      "text": "We have your order."
+    },
+    {
+      "name": "Confirmed",
+      "text": "Your order is confirmed and payment is checked."
+    },
+    {
+      "name": "Bought from supplier",
+      "text": "Our team in China has bought your goods from the factory."
+    },
+    {
+      "name": "Shipped from China",
+      "text": "Your goods have left China."
+    },
+    {
+      "name": "Arrived in Nigeria",
+      "text": "Your goods have landed and are going through customs."
+    },
+    {
+      "name": "At our Lagos warehouse",
+      "text": "Your goods are sorted and ready to go out."
+    },
+    {
+      "name": "Out for delivery",
+      "text": "A rider is on the way to you."
+    },
+    {
+      "name": "Delivered",
+      "text": "Your order has been delivered. Enjoy!"
+    }
+  ],
+  "agents": [
+    {
+      "id": "a1",
+      "name": "Amaka",
+      "phone": "+234 800 000 0001",
+      "whatsapp": "2348000000001"
+    },
+    {
+      "id": "a2",
+      "name": "Tunde",
+      "phone": "+234 800 000 0002",
+      "whatsapp": "2348000000002"
+    }
+  ],
+  "products": [
+    {
+      "id": "p126",
+      "cat": "phones",
+      "sub": "Oppo",
+      "name": "Oppo F19 Pro Plus",
+      "price": 340000,
+      "oldPrice": 507500,
+      "rating": 4,
+      "sold": 8382,
+      "stock": 30,
+      "ship": "7-12",
+      "img": "assets/products/p126-t.webp",
+      "imgs": [
+        "assets/products/p126-1.webp",
+        "assets/products/p126-2.webp",
+        "assets/products/p126-3.webp"
+      ],
+      "desc": "The Oppo F19 Pro Plus is a feature-rich smartphone with a focus on camera capabilities. It boasts advanced photography features and a powerful performance for a premium user experience."
+    },
+    {
+      "id": "p128",
+      "cat": "phones",
+      "sub": "Realme",
+      "name": "Realme C35",
+      "price": 127500,
+      "oldPrice": 240500,
+      "rating": 4.7,
+      "sold": 8656,
+      "stock": 136,
+      "ship": "7-12",
+      "img": "assets/products/p128-t.webp",
+      "imgs": [
+        "assets/products/p128-1.webp",
+        "assets/products/p128-2.webp",
+        "assets/products/p128-3.webp"
+      ],
+      "desc": "The Realme C35 is a budget-friendly smartphone with a focus on providing essential features for everyday use. It offers a reliable performance and user-friendly experience."
+    },
+    {
+      "id": "p130",
+      "cat": "phones",
+      "sub": "Realme",
+      "name": "Realme XT",
+      "price": 297500,
+      "oldPrice": 396500,
+      "rating": 4.3,
+      "sold": 8930,
+      "stock": 62,
+      "ship": "7-12",
+      "img": "assets/products/p130-t.webp",
+      "imgs": [
+        "assets/products/p130-1.webp",
+        "assets/products/p130-2.webp",
+        "assets/products/p130-3.webp"
+      ],
+      "desc": "The Realme XT is a feature-rich smartphone with a focus on camera technology. It comes equipped with advanced camera sensors, delivering high-quality photos and videos for photography enthusiasts."
+    },
+    {
+      "id": "p134",
+      "cat": "phones",
+      "sub": "Vivo",
+      "name": "Vivo S1",
+      "price": 212500,
+      "oldPrice": 256000,
+      "rating": 4.6,
+      "sold": 478,
+      "stock": 94,
+      "ship": "7-12",
+      "img": "assets/products/p134-t.webp",
+      "imgs": [
+        "assets/products/p134-1.webp",
+        "assets/products/p134-2.webp",
+        "assets/products/p134-3.webp"
+      ],
+      "desc": "The Vivo S1 is a stylish and mid-range smartphone offering a blend of design and performance. It features a vibrant display, capable camera system, and reliable functionality."
+    },
+    {
+      "id": "p136",
+      "cat": "phones",
+      "sub": "Vivo",
+      "condition": "used",
+      "name": "Vivo X21 (UK used)",
+      "price": 185000,
+      "oldPrice": 0,
+      "rating": 4.2,
+      "sold": 752,
+      "stock": 20,
+      "ship": "7-12",
+      "img": "assets/products/p136-t.webp",
+      "imgs": [
+        "assets/products/p136-1.webp",
+        "assets/products/p136-2.webp",
+        "assets/products/p136-3.webp"
+      ],
+      "desc": "The Vivo X21 is a premium smartphone with a focus on cutting-edge technology. It features an in-display fingerprint sensor, a high-resolution display, and advanced camera capabilities."
+    },
+    {
+      "id": "p160",
+      "cat": "phones",
+      "sub": "Samsung",
+      "name": "Samsung Galaxy Tab S8 Plus",
+      "price": 510000,
+      "oldPrice": 629500,
+      "rating": 4.9,
+      "sold": 4040,
+      "stock": 32,
+      "ship": "7-12",
+      "img": "assets/products/p160-t.webp",
+      "imgs": [
+        "assets/products/p160-1.webp",
+        "assets/products/p160-2.webp",
+        "assets/products/p160-3.webp"
+      ],
+      "desc": "The Samsung Galaxy Tab S8 Plus in Grey is a high-performance Android tablet by Samsung. With a large AMOLED display, powerful processor, and S Pen support, it's ideal for productivity and entertainment."
+    },
+    {
+      "id": "p161",
+      "cat": "phones",
+      "sub": "Samsung",
+      "name": "Samsung Galaxy Tab, White",
+      "price": 297500,
+      "oldPrice": 402000,
+      "rating": 4.7,
+      "sold": 4177,
+      "stock": 85,
+      "ship": "7-12",
+      "img": "assets/products/p161-t.webp",
+      "imgs": [
+        "assets/products/p161-1.webp",
+        "assets/products/p161-2.webp",
+        "assets/products/p161-3.webp"
+      ],
+      "desc": "The Samsung Galaxy Tab in White is a sleek and versatile Android tablet. With a vibrant display, long-lasting battery, and a range of features, it offers a great user experience for various tasks."
+    },
+    {
+      "id": "p80",
+      "cat": "electronics",
+      "sub": "Laptops",
+      "name": "Huawei Matebook X Pro",
+      "price": 1190000,
+      "oldPrice": 1831000,
+      "rating": 4.4,
+      "sold": 2080,
+      "stock": 112,
+      "ship": "12-18",
+      "img": "assets/products/p80-t.webp",
+      "imgs": [
+        "assets/products/p80-1.webp",
+        "assets/products/p80-2.webp",
+        "assets/products/p80-3.webp"
+      ],
+      "desc": "The Huawei Matebook X Pro is a slim and stylish laptop with a high-resolution touchscreen display, offering a premium experience for users on the go."
+    },
+    {
+      "id": "p81",
+      "cat": "electronics",
+      "sub": "Laptops",
+      "condition": "used",
+      "name": "Lenovo Yoga 920 (UK used)",
+      "price": 520000,
+      "oldPrice": 0,
+      "rating": 4.2,
+      "sold": 2217,
+      "stock": 165,
+      "ship": "12-18",
+      "img": "assets/products/p81-t.webp",
+      "imgs": [
+        "assets/products/p81-1.webp",
+        "assets/products/p81-2.webp",
+        "assets/products/p81-3.webp"
+      ],
+      "desc": "The Lenovo Yoga 920 is a 2-in-1 convertible laptop with a flexible hinge, allowing you to use it as a laptop or tablet, offering versatility and portability."
+    },
+    {
+      "id": "p100",
+      "cat": "electronics",
+      "sub": "Audio",
+      "name": "Apple Airpods",
+      "price": 110500,
+      "oldPrice": 160000,
+      "rating": 4.8,
+      "sold": 4820,
+      "stock": 92,
+      "ship": "7-12",
+      "img": "assets/products/p100-t.webp",
+      "imgs": [
+        "assets/products/p100-1.webp",
+        "assets/products/p100-2.webp",
+        "assets/products/p100-3.webp"
+      ],
+      "desc": "The Apple Airpods offer a seamless wireless audio experience. With easy pairing, high-quality sound, and Siri integration, they are perfect for on-the-go listening."
+    },
+    {
+      "id": "p101",
+      "cat": "electronics",
+      "sub": "Audio",
+      "name": "Apple AirPods Max",
+      "price": 467500,
+      "oldPrice": 754000,
+      "rating": 4.6,
+      "sold": 4957,
+      "stock": 145,
+      "ship": "7-12",
+      "img": "assets/products/p101-t.webp",
+      "imgs": [
+        "assets/products/p101-1.webp"
+      ],
+      "desc": "The Apple AirPods Max in Silver are premium over-ear headphones with high-fidelity audio, adaptive EQ, and active noise cancellation. Experience immersive sound in style."
+    },
+    {
+      "id": "p107",
+      "cat": "electronics",
+      "sub": "Audio",
+      "name": "Beats Flex Wireless Earphones",
+      "price": 42500,
+      "oldPrice": 76000,
+      "rating": 4.5,
+      "sold": 5779,
+      "stock": 103,
+      "ship": "7-12",
+      "img": "assets/products/p107-t.webp",
+      "imgs": [
+        "assets/products/p107-1.webp"
+      ],
+      "desc": "The Beats Flex Wireless Earphones offer a comfortable and versatile audio experience. With magnetic earbuds and up to 12 hours of battery life, they are ideal for everyday use."
+    },
+    {
+      "id": "p99",
+      "cat": "electronics",
+      "sub": "Smart Home",
+      "name": "Amazon Echo Plus",
+      "price": 85000,
+      "oldPrice": 112000,
+      "rating": 3.9,
+      "sold": 4683,
+      "stock": 39,
+      "ship": "7-12",
+      "img": "assets/products/p99-t.webp",
+      "imgs": [
+        "assets/products/p99-1.webp",
+        "assets/products/p99-2.webp"
+      ],
+      "desc": "The Amazon Echo Plus is a smart speaker with built-in Alexa voice control. It features premium sound quality and serves as a hub for controlling smart home devices."
+    },
+    {
+      "id": "p106",
+      "cat": "electronics",
+      "sub": "Wearables",
+      "name": "Apple Watch Series 4",
+      "price": 297500,
+      "oldPrice": 472000,
+      "rating": 4.7,
+      "sold": 5642,
+      "stock": 50,
+      "ship": "7-12",
+      "img": "assets/products/p106-t.webp",
+      "imgs": [
+        "assets/products/p106-1.webp",
+        "assets/products/p106-2.webp",
+        "assets/products/p106-3.webp"
+      ],
+      "desc": "The Apple Watch Series 4 in Gold is a stylish and advanced smartwatch with features like heart rate monitoring, fitness tracking, and a beautiful Retina display."
+    },
+    {
+      "id": "p110",
+      "cat": "gadgets",
+      "sub": "Photo & Vlogging",
+      "name": "Ring Light with Tripod Stand",
+      "price": 12700,
+      "oldPrice": 18000,
+      "rating": 3.9,
+      "sold": 6190,
+      "stock": 82,
+      "ship": "7-12",
+      "img": "assets/products/p110-t.webp",
+      "imgs": [
+        "assets/products/p110-1.webp"
+      ],
+      "desc": "The Ring Light with Tripod Stand is a portable and adjustable LED light designed to enhance your selfies and video calls. Attach it to your iPhone for well-lit photos."
+    },
+    {
+      "id": "p111",
+      "cat": "gadgets",
+      "sub": "Photo & Vlogging",
+      "name": "Bluetooth Selfie Stick",
+      "price": 11000,
+      "oldPrice": 17000,
+      "rating": 4.8,
+      "sold": 6327,
+      "stock": 135,
+      "ship": "7-12",
+      "img": "assets/products/p111-t.webp",
+      "imgs": [
+        "assets/products/p111-1.webp"
+      ],
+      "desc": "The Bluetooth Selfie Stick is a extendable and foldable device for capturing the perfect selfie or group photo. Compatible with smartphones and cameras."
+    },
+    {
+      "id": "p83",
+      "cat": "fashion",
+      "sub": "Shirts",
+      "name": "Men's Blue Check Shirt",
+      "price": 25500,
+      "oldPrice": 32000,
+      "rating": 4.9,
+      "sold": 2491,
+      "stock": 91,
+      "ship": "7-12",
+      "img": "assets/products/p83-t.webp",
+      "imgs": [
+        "assets/products/p83-1.webp",
+        "assets/products/p83-2.webp",
+        "assets/products/p83-3.webp"
+      ],
+      "desc": "The Men's Blue Check Shirt is a stylish and comfortable men's shirt featuring a classic check pattern. Made from high-quality fabric, it's suitable for both casual and semi-formal occasions."
+    },
+    {
+      "id": "p85",
+      "cat": "fashion",
+      "sub": "Shirts",
+      "name": "Men's Red Plaid Shirt",
+      "price": 29700,
+      "oldPrice": 45000,
+      "rating": 4.5,
+      "sold": 2765,
+      "stock": 17,
+      "ship": "7-12",
+      "img": "assets/products/p85-t.webp",
+      "imgs": [
+        "assets/products/p85-1.webp",
+        "assets/products/p85-2.webp",
+        "assets/products/p85-3.webp"
+      ],
+      "desc": "The Men's Red Plaid Shirt is a timeless and versatile men's shirt with a classic plaid pattern. Its comfortable fit and casual style make it a wardrobe essential for various occasions."
+    },
+    {
+      "id": "p86",
+      "cat": "fashion",
+      "sub": "Shirts",
+      "name": "Men's Floral Short Sleeve Shirt",
+      "price": 17000,
+      "oldPrice": 29000,
+      "rating": 4.3,
+      "sold": 2902,
+      "stock": 70,
+      "ship": "7-12",
+      "img": "assets/products/p86-t.webp",
+      "imgs": [
+        "assets/products/p86-1.webp",
+        "assets/products/p86-2.webp",
+        "assets/products/p86-3.webp"
+      ],
+      "desc": "The Men's Floral Short Sleeve Shirt is a breezy and stylish option for warm days. With a comfortable fit and short sleeves, it's perfect for a laid-back yet polished look."
+    },
+    {
+      "id": "p163",
+      "cat": "fashion",
+      "sub": "Dresses",
+      "name": "Printed Summer Maxi Dress",
+      "price": 17000,
+      "oldPrice": 28500,
+      "rating": 4.3,
+      "sold": 4451,
+      "stock": 191,
+      "ship": "7-12",
+      "img": "assets/products/p163-t.webp",
+      "imgs": [
+        "assets/products/p163-1.webp",
+        "assets/products/p163-2.webp",
+        "assets/products/p163-3.webp"
+      ],
+      "desc": "The Printed Summer Maxi Dress is a cute and breezy dress designed for warm weather. With playful patterns and lightweight fabric, it's perfect for keeping cool and stylish during the summer."
+    },
+    {
+      "id": "p164",
+      "cat": "fashion",
+      "sub": "Dresses",
+      "name": "Grey Sleeveless Midi Dress",
+      "price": 29700,
+      "oldPrice": 56000,
+      "rating": 4.1,
+      "sold": 4588,
+      "stock": 64,
+      "ship": "7-12",
+      "img": "assets/products/p164-t.webp",
+      "imgs": [
+        "assets/products/p164-1.webp",
+        "assets/products/p164-2.webp",
+        "assets/products/p164-3.webp"
+      ],
+      "desc": "The Grey Sleeveless Midi Dress is a versatile and chic option for various occasions. With a neutral gray color, it can be dressed up or down, making it a wardrobe staple for any fashion-forward individual."
+    },
+    {
+      "id": "p177",
+      "cat": "fashion",
+      "sub": "Dresses",
+      "name": "Floral Evening Gown",
+      "price": 110500,
+      "oldPrice": 158000,
+      "rating": 4.8,
+      "sold": 6369,
+      "stock": 33,
+      "ship": "7-12",
+      "img": "assets/products/p177-t.webp",
+      "imgs": [
+        "assets/products/p177-1.webp",
+        "assets/products/p177-2.webp",
+        "assets/products/p177-3.webp"
+      ],
+      "desc": "The Floral Evening Gown is an elegant and timeless evening gown. With a sleek black design, it's perfect for formal events and special occasions, exuding sophistication and style."
+    },
+    {
+      "id": "p180",
+      "cat": "fashion",
+      "sub": "Dresses",
+      "name": "Polka Dot Party Dress",
+      "price": 42500,
+      "oldPrice": 50000,
+      "rating": 4.2,
+      "sold": 6780,
+      "stock": 12,
+      "ship": "7-12",
+      "img": "assets/products/p180-t.webp",
+      "imgs": [
+        "assets/products/p180-1.webp",
+        "assets/products/p180-2.webp",
+        "assets/products/p180-3.webp"
+      ],
+      "desc": "The Polka Dot Party Dress is a stylish and comfortable dress with a pea pattern. Perfect for casual outings, it adds a playful and fun element to your wardrobe, making it a great choice for day-to-day wear."
+    },
+    {
+      "id": "p154",
+      "cat": "fashion",
+      "sub": "Sunglasses",
+      "name": "Classic Black Sunglasses",
+      "price": 25500,
+      "oldPrice": 50000,
+      "rating": 3.9,
+      "sold": 3218,
+      "stock": 74,
+      "ship": "7-12",
+      "img": "assets/products/p154-t.webp",
+      "imgs": [
+        "assets/products/p154-1.webp",
+        "assets/products/p154-2.webp",
+        "assets/products/p154-3.webp"
+      ],
+      "desc": "The Classic Black Sunglasses are a classic and stylish choice, featuring a sleek black frame and tinted lenses. They provide both UV protection and a fashionable look."
+    },
+    {
+      "id": "p157",
+      "cat": "fashion",
+      "sub": "Sunglasses",
+      "name": "Pixel Party Glasses",
+      "price": 17000,
+      "oldPrice": 26000,
+      "rating": 4.4,
+      "sold": 3629,
+      "stock": 53,
+      "ship": "7-12",
+      "img": "assets/products/p157-t.webp",
+      "imgs": [
+        "assets/products/p157-1.webp",
+        "assets/products/p157-2.webp",
+        "assets/products/p157-3.webp"
+      ],
+      "desc": "The Pixel Party Glasses are designed to add flair to your party outfit. With unique shapes or colorful frames, they're perfect for adding a playful touch to your look during celebrations."
+    },
+    {
+      "id": "p51",
+      "cat": "home",
+      "sub": "Kitchen Appliances",
+      "name": "Countertop Blender 1.5L",
+      "price": 34000,
+      "oldPrice": 65500,
+      "rating": 4.7,
+      "sold": 7107,
+      "stock": 15,
+      "ship": "7-12",
+      "img": "assets/products/p51-t.webp",
+      "imgs": [
+        "assets/products/p51-1.webp",
+        "assets/products/p51-2.webp",
+        "assets/products/p51-3.webp"
+      ],
+      "desc": "The Countertop Blender 1.5L is a powerful and compact blender perfect for smoothies, shakes, and more. Its convenient design and multiple functions make it a versatile kitchen appliance."
+    },
+    {
+      "id": "p66",
+      "cat": "home",
+      "sub": "Kitchen Appliances",
+      "name": "Microwave Oven 20L",
+      "price": 76500,
+      "oldPrice": 139000,
+      "rating": 3.9,
+      "sold": 162,
+      "stock": 90,
+      "ship": "12-18",
+      "img": "assets/products/p66-t.webp",
+      "imgs": [
+        "assets/products/p66-1.webp",
+        "assets/products/p66-2.webp",
+        "assets/products/p66-3.webp"
+      ],
+      "desc": "The Microwave Oven 20L is a versatile kitchen appliance for quick and efficient cooking, reheating, and defrosting. Its compact size makes it suitable for various kitchen setups."
+    },
+    {
+      "id": "p56",
+      "cat": "home",
+      "sub": "Kitchen Appliances",
+      "name": "Electric Hob, 4 Burners",
+      "price": 42500,
+      "oldPrice": 80000,
+      "rating": 4.8,
+      "sold": 7792,
+      "stock": 100,
+      "ship": "12-18",
+      "img": "assets/products/p56-t.webp",
+      "imgs": [
+        "assets/products/p56-1.webp",
+        "assets/products/p56-2.webp",
+        "assets/products/p56-3.webp"
+      ],
+      "desc": "The Electric Hob, 4 Burners provides a portable and efficient cooking solution. Ideal for small kitchens or as an additional cooking surface for various culinary needs."
+    },
+    {
+      "id": "p71",
+      "cat": "home",
+      "sub": "Cookware",
+      "name": "Stainless Steel Pot with Glass Lid",
+      "price": 34000,
+      "oldPrice": 60500,
+      "rating": 4,
+      "sold": 847,
+      "stock": 175,
+      "ship": "7-12",
+      "img": "assets/products/p71-t.webp",
+      "imgs": [
+        "assets/products/p71-1.webp"
+      ],
+      "desc": "The Silver Pot with Glass Cap is a stylish and functional cookware item for boiling, simmering, and preparing delicious meals. Its glass cap allows you to monitor cooking progress."
+    },
+    {
+      "id": "p52",
+      "cat": "home",
+      "sub": "Cookware",
+      "name": "Carbon Steel Wok",
+      "price": 25500,
+      "oldPrice": 31500,
+      "rating": 4.5,
+      "sold": 7244,
+      "stock": 68,
+      "ship": "7-12",
+      "img": "assets/products/p52-t.webp",
+      "imgs": [
+        "assets/products/p52-1.webp"
+      ],
+      "desc": "The Carbon Steel Wok is a versatile cooking pan suitable for stir-frying, sautéing, and deep frying. Its sturdy construction ensures even heat distribution for delicious meals."
+    },
+    {
+      "id": "p47",
+      "cat": "home",
+      "sub": "Home Decor",
+      "name": "Vintage Table Lamp",
+      "price": 42500,
+      "oldPrice": 53000,
+      "rating": 4.4,
+      "sold": 6559,
+      "stock": 163,
+      "ship": "7-12",
+      "img": "assets/products/p47-t.webp",
+      "imgs": [
+        "assets/products/p47-1.webp"
+      ],
+      "desc": "The Vintage Table Lamp is a functional and decorative lighting solution for your living space. With a modern design, it provides both ambient and task lighting, enhancing the atmosphere."
+    },
+    {
+      "id": "p46",
+      "cat": "home",
+      "sub": "Home Decor",
+      "name": "Ceramic Pot with Faux Plant",
+      "price": 12700,
+      "oldPrice": 25000,
+      "rating": 4.6,
+      "sold": 6422,
+      "stock": 110,
+      "ship": "7-12",
+      "img": "assets/products/p46-t.webp",
+      "imgs": [
+        "assets/products/p46-1.webp",
+        "assets/products/p46-2.webp",
+        "assets/products/p46-3.webp"
+      ],
+      "desc": "The Ceramic Pot with Faux Plant is a stylish container for your favorite plants. With a sleek design, it complements your indoor or outdoor garden, adding a modern touch to your plant display."
+    },
+    {
+      "id": "p45",
+      "cat": "home",
+      "sub": "Home Decor",
+      "name": "Decorative Plant with Metal Stand",
+      "price": 34000,
+      "oldPrice": 58500,
+      "rating": 4.8,
+      "sold": 6285,
+      "stock": 57,
+      "ship": "7-12",
+      "img": "assets/products/p45-t.webp",
+      "imgs": [
+        "assets/products/p45-1.webp",
+        "assets/products/p45-2.webp",
+        "assets/products/p45-3.webp"
+      ],
+      "desc": "The Decorative Plant with Metal Stand is an artificial plant that brings a touch of nature to your home without the need for maintenance. It adds greenery and style to any space."
+    },
+    {
+      "id": "p12",
+      "cat": "furniture",
+      "sub": "Living Room",
+      "name": "3-Seater Sofa, Cream",
+      "price": 357000,
+      "oldPrice": 489000,
+      "rating": 4.8,
+      "sold": 1764,
+      "stock": 108,
+      "ship": "12-18",
+      "img": "assets/products/p12-t.webp",
+      "imgs": [
+        "assets/products/p12-1.webp",
+        "assets/products/p12-2.webp",
+        "assets/products/p12-3.webp"
+      ],
+      "desc": "The 3-Seater Sofa, Cream is a sophisticated and comfortable seating option, featuring exquisite design and premium upholstery for your living room."
+    },
+    {
+      "id": "p13",
+      "cat": "furniture",
+      "sub": "Bedroom",
+      "name": "Wooden Bedside Table",
+      "price": 72300,
+      "oldPrice": 109500,
+      "rating": 4.6,
+      "sold": 1901,
+      "stock": 161,
+      "ship": "12-18",
+      "img": "assets/products/p13-t.webp",
+      "imgs": [
+        "assets/products/p13-1.webp",
+        "assets/products/p13-2.webp",
+        "assets/products/p13-3.webp"
+      ],
+      "desc": "The Bedside Table in African Cherry is a stylish and functional addition to your bedroom, providing convenient storage space and a touch of elegance."
+    },
+    {
+      "id": "p1",
+      "cat": "beauty",
+      "sub": "Makeup",
+      "name": "Volume Mascara",
+      "price": 8500,
+      "oldPrice": 11000,
+      "rating": 4.8,
+      "sold": 257,
+      "stock": 65,
+      "ship": "7-12",
+      "img": "assets/products/p1-t.webp",
+      "imgs": [
+        "assets/products/p1-1.webp"
+      ],
+      "desc": "The Volume Mascara is a popular mascara known for its volumizing and lengthening effects. Achieve dramatic lashes with this long-lasting and cruelty-free formula."
+    },
+    {
+      "id": "p2",
+      "cat": "beauty",
+      "sub": "Makeup",
+      "name": "Eyeshadow Palette with Mirror",
+      "price": 17000,
+      "oldPrice": 24000,
+      "rating": 4.6,
+      "sold": 394,
+      "stock": 118,
+      "ship": "7-12",
+      "img": "assets/products/p2-t.webp",
+      "imgs": [
+        "assets/products/p2-1.webp"
+      ],
+      "desc": "The Eyeshadow Palette with Mirror offers a versatile range of eyeshadow shades for creating stunning eye looks. With a built-in mirror, it's convenient for on-the-go makeup application."
+    },
+    {
+      "id": "p3",
+      "cat": "beauty",
+      "sub": "Makeup",
+      "name": "Pressed Powder Compact",
+      "price": 12700,
+      "oldPrice": 20000,
+      "rating": 4.4,
+      "sold": 531,
+      "stock": 171,
+      "ship": "7-12",
+      "img": "assets/products/p3-t.webp",
+      "imgs": [
+        "assets/products/p3-1.webp"
+      ],
+      "desc": "The Pressed Powder Compact is a finely milled setting powder designed to set makeup and control shine. With a lightweight and translucent formula, it provides a smooth and matte finish."
+    },
+    {
+      "id": "p4",
+      "cat": "beauty",
+      "sub": "Makeup",
+      "name": "Matte Red Lipstick",
+      "price": 11000,
+      "oldPrice": 19500,
+      "rating": 4.2,
+      "sold": 668,
+      "stock": 44,
+      "ship": "7-12",
+      "img": "assets/products/p4-t.webp",
+      "imgs": [
+        "assets/products/p4-1.webp"
+      ],
+      "desc": "The Matte Red Lipstick is a classic and bold choice for adding a pop of color to your lips. With a creamy and pigmented formula, it provides a vibrant and long-lasting finish."
+    },
+    {
+      "id": "p5",
+      "cat": "beauty",
+      "sub": "Nails",
+      "name": "Red Nail Polish",
+      "price": 7600,
+      "oldPrice": 15000,
+      "rating": 4,
+      "sold": 805,
+      "stock": 97,
+      "ship": "7-12",
+      "img": "assets/products/p5-t.webp",
+      "imgs": [
+        "assets/products/p5-1.webp"
+      ],
+      "desc": "The Red Nail Polish offers a rich and glossy red hue for vibrant and polished nails. With a quick-drying formula, it provides a salon-quality finish at home."
+    },
+    {
+      "id": "p172",
+      "cat": "bags",
+      "sub": "Bags",
+      "name": "Women's Tote Handbag, Navy",
+      "price": 42500,
+      "oldPrice": 61500,
+      "rating": 4.7,
+      "sold": 5684,
+      "stock": 128,
+      "ship": "7-12",
+      "img": "assets/products/p172-t.webp",
+      "imgs": [
+        "assets/products/p172-1.webp",
+        "assets/products/p172-2.webp",
+        "assets/products/p172-3.webp"
+      ],
+      "desc": "The Women's Tote Handbag, Navy is a stylish and spacious accessory for everyday use. With a vibrant blue color and multiple compartments, it combines fashion and functionality."
+    },
+    {
+      "id": "p173",
+      "cat": "bags",
+      "sub": "Bags",
+      "name": "Women's Leather Shoulder Bag",
+      "price": 110500,
+      "oldPrice": 178000,
+      "rating": 4.5,
+      "sold": 5821,
+      "stock": 181,
+      "ship": "7-12",
+      "img": "assets/products/p173-t.webp",
+      "imgs": [
+        "assets/products/p173-1.webp",
+        "assets/products/p173-2.webp",
+        "assets/products/p173-3.webp"
+      ],
+      "desc": "The Women's Leather Shoulder Bag is a luxurious and high-quality leather bag for the sophisticated woman. With a timeless design and durable craftsmanship, it's a versatile accessory."
+    },
+    {
+      "id": "p175",
+      "cat": "bags",
+      "sub": "Bags",
+      "name": "White Faux Leather Backpack",
+      "price": 34000,
+      "oldPrice": 40500,
+      "rating": 4.1,
+      "sold": 6095,
+      "stock": 107,
+      "ship": "7-12",
+      "img": "assets/products/p175-t.webp",
+      "imgs": [
+        "assets/products/p175-1.webp",
+        "assets/products/p175-2.webp",
+        "assets/products/p175-3.webp"
+      ],
+      "desc": "The White Faux Leather Backpack is a trendy and practical backpack for the modern woman. With a sleek white design and ample storage space, it's perfect for both casual and on-the-go styles."
+    },
+    {
+      "id": "p176",
+      "cat": "bags",
+      "sub": "Bags",
+      "name": "Women's Structured Handbag, Black",
+      "price": 51000,
+      "oldPrice": 66000,
+      "rating": 3.9,
+      "sold": 6232,
+      "stock": 160,
+      "ship": "7-12",
+      "img": "assets/products/p176-t.webp",
+      "imgs": [
+        "assets/products/p176-1.webp",
+        "assets/products/p176-2.webp",
+        "assets/products/p176-3.webp"
+      ],
+      "desc": "The Women Handbag in Black is a classic and versatile accessory that complements various outfits. With a timeless black color and functional design, it's a must-have in every woman's wardrobe."
+    },
+    {
+      "id": "p91",
+      "cat": "bags",
+      "sub": "Shoes",
+      "name": "Sports Sneakers, White & Red",
+      "price": 102000,
+      "oldPrice": 170000,
+      "rating": 4.4,
+      "sold": 3587,
+      "stock": 155,
+      "ship": "7-12",
+      "img": "assets/products/p91-t.webp",
+      "imgs": [
+        "assets/products/p91-1.webp",
+        "assets/products/p91-2.webp",
+        "assets/products/p91-3.webp"
+      ],
+      "desc": "The Sports Sneakers in Off White and Red combine style and functionality, making them a fashionable choice for sports enthusiasts. The red and off-white color combination adds a bold and energetic touch."
+    },
+    {
+      "id": "p90",
+      "cat": "bags",
+      "sub": "Shoes",
+      "name": "Retro Running Trainers",
+      "price": 76500,
+      "oldPrice": 114000,
+      "rating": 4.6,
+      "sold": 3450,
+      "stock": 102,
+      "ship": "7-12",
+      "img": "assets/products/p90-t.webp",
+      "imgs": [
+        "assets/products/p90-1.webp",
+        "assets/products/p90-2.webp",
+        "assets/products/p90-3.webp"
+      ],
+      "desc": "The Retro Running Trainers offer a blend of retro style and modern comfort. Perfect for casual wear, these trainers provide a fashionable and comfortable option for everyday use."
+    },
+    {
+      "id": "p187",
+      "cat": "bags",
+      "sub": "Shoes",
+      "name": "Gold High Heels",
+      "price": 42500,
+      "oldPrice": 59000,
+      "rating": 3.9,
+      "sold": 7739,
+      "stock": 23,
+      "ship": "7-12",
+      "img": "assets/products/p187-t.webp",
+      "imgs": [
+        "assets/products/p187-1.webp",
+        "assets/products/p187-2.webp",
+        "assets/products/p187-3.webp"
+      ],
+      "desc": "The Golden Shoes for Women are a glamorous choice for special occasions. Featuring a golden hue and stylish design, they add a touch of luxury to your outfit."
+    },
+    {
+      "id": "p189",
+      "cat": "bags",
+      "sub": "Shoes",
+      "name": "Red Stiletto Heels",
+      "price": 29700,
+      "oldPrice": 51000,
+      "rating": 4.6,
+      "sold": 8013,
+      "stock": 129,
+      "ship": "7-12",
+      "img": "assets/products/p189-t.webp",
+      "imgs": [
+        "assets/products/p189-1.webp",
+        "assets/products/p189-2.webp",
+        "assets/products/p189-3.webp"
+      ],
+      "desc": "The Red Stiletto Heels make a bold statement with their vibrant red color. Whether for a party or a casual outing, these shoes add a pop of color and style to your wardrobe."
+    },
+    {
+      "id": "p185",
+      "cat": "bags",
+      "sub": "Shoes",
+      "name": "Black & Brown Court Heels",
+      "price": 17000,
+      "oldPrice": 34000,
+      "rating": 4.3,
+      "sold": 7465,
+      "stock": 97,
+      "ship": "7-12",
+      "img": "assets/products/p185-t.webp",
+      "imgs": [
+        "assets/products/p185-1.webp",
+        "assets/products/p185-2.webp",
+        "assets/products/p185-3.webp"
+      ],
+      "desc": "The Black & Brown Court Heels is a comfortable and stylish choice for casual wear. Featuring a blend of black and brown colors, it adds a touch of sophistication to your relaxation."
+    },
+    {
+      "id": "p93",
+      "cat": "watches",
+      "sub": "Watches",
+      "name": "Men's Leather Strap Watch",
+      "price": 76500,
+      "oldPrice": 93500,
+      "rating": 4,
+      "sold": 3861,
+      "stock": 81,
+      "ship": "7-12",
+      "img": "assets/products/p93-t.webp",
+      "imgs": [
+        "assets/products/p93-1.webp",
+        "assets/products/p93-2.webp",
+        "assets/products/p93-3.webp"
+      ],
+      "desc": "The Men's Leather Strap Watch is a stylish timepiece with a classic design. Featuring a genuine leather strap and a sleek dial, it adds a touch of sophistication to your look."
+    },
+    {
+      "id": "p193",
+      "cat": "watches",
+      "sub": "Watches",
+      "name": "Women's Gold Watch",
+      "price": 50200,
+      "oldPrice": 76000,
+      "rating": 4.9,
+      "sold": 8561,
+      "stock": 161,
+      "ship": "7-12",
+      "img": "assets/products/p193-t.webp",
+      "imgs": [
+        "assets/products/p193-1.webp",
+        "assets/products/p193-2.webp",
+        "assets/products/p193-3.webp"
+      ],
+      "desc": "The Gold Women's Watch is a stunning accessory that combines luxury and style. Featuring a gold-plated case and a chic design, it adds a touch of glamour to any outfit."
+    },
+    {
+      "id": "p194",
+      "cat": "watches",
+      "sub": "Watches",
+      "name": "Women's Steel Wrist Watch",
+      "price": 110500,
+      "oldPrice": 187500,
+      "rating": 4.7,
+      "sold": 8698,
+      "stock": 34,
+      "ship": "7-12",
+      "img": "assets/products/p194-t.webp",
+      "imgs": [
+        "assets/products/p194-1.webp",
+        "assets/products/p194-2.webp",
+        "assets/products/p194-3.webp"
+      ],
+      "desc": "The Women's Steel Wrist Watch is a versatile and fashionable timepiece for everyday wear. With a comfortable strap and a simple yet elegant design, it complements various styles."
+    },
+    {
+      "id": "p182",
+      "cat": "watches",
+      "sub": "Earrings",
+      "name": "Green Crystal Drop Earrings",
+      "price": 25500,
+      "oldPrice": 36000,
+      "rating": 4.9,
+      "sold": 7054,
+      "stock": 118,
+      "ship": "7-12",
+      "img": "assets/products/p182-t.webp",
+      "imgs": [
+        "assets/products/p182-1.webp",
+        "assets/products/p182-2.webp",
+        "assets/products/p182-3.webp"
+      ],
+      "desc": "The Green Crystal Drop Earrings is a dazzling accessory that features a vibrant green crystal. With a classic design, it adds a touch of elegance to your ensemble, perfect for formal or special occasions."
+    },
+    {
+      "id": "p183",
+      "cat": "watches",
+      "sub": "Earrings",
+      "name": "Green Check Hoop Earrings",
+      "price": 21200,
+      "oldPrice": 33000,
+      "rating": 4.7,
+      "sold": 7191,
+      "stock": 171,
+      "ship": "7-12",
+      "img": "assets/products/p183-t.webp",
+      "imgs": [
+        "assets/products/p183-1.webp",
+        "assets/products/p183-2.webp",
+        "assets/products/p183-3.webp"
+      ],
+      "desc": "The Green Check Hoop Earrings is a stylish and versatile accessory with a unique oval shape. Whether for casual or dressy occasions, its green hue and contemporary design make it a standout piece."
+    },
+    {
+      "id": "p184",
+      "cat": "watches",
+      "sub": "Earrings",
+      "name": "Tropical Leaf Earrings",
+      "price": 17000,
+      "oldPrice": 30000,
+      "rating": 4.5,
+      "sold": 7328,
+      "stock": 44,
+      "ship": "7-12",
+      "img": "assets/products/p184-t.webp",
+      "imgs": [
+        "assets/products/p184-1.webp",
+        "assets/products/p184-2.webp",
+        "assets/products/p184-3.webp"
+      ],
+      "desc": "The Tropical Leaf Earrings is a fun and playful accessory inspired by tropical elements. Featuring vibrant colors and a lively design, it's perfect for adding a touch of summer to your look."
+    },
+    {
+      "id": "p147",
+      "cat": "sports",
+      "sub": "Ball Sports",
+      "name": "Football, Size 5",
+      "price": 15300,
+      "oldPrice": 24000,
+      "rating": 4.2,
+      "sold": 2259,
+      "stock": 63,
+      "ship": "7-12",
+      "img": "assets/products/p147-t.webp",
+      "imgs": [
+        "assets/products/p147-1.webp"
+      ],
+      "desc": "The Football, Size 5, also known as a soccer ball, is the standard ball used in the sport of football (soccer). It is designed for kicking and passing in the game."
+    },
+    {
+      "id": "p140",
+      "cat": "sports",
+      "sub": "Ball Sports",
+      "name": "Basketball, Size 7",
+      "price": 12700,
+      "oldPrice": 16500,
+      "rating": 4.5,
+      "sold": 1300,
+      "stock": 52,
+      "ship": "7-12",
+      "img": "assets/products/p140-t.webp",
+      "imgs": [
+        "assets/products/p140-1.webp"
+      ],
+      "desc": "The Basketball, Size 7 is a standard ball used in basketball games. It is designed for dribbling, shooting, and passing in the game of basketball, suitable for both indoor and outdoor play."
+    },
+    {
+      "id": "p152",
+      "cat": "sports",
+      "sub": "Racket Sports",
+      "name": "Tennis Racket",
+      "price": 42500,
+      "oldPrice": 65500,
+      "rating": 4.3,
+      "sold": 2944,
+      "stock": 148,
+      "ship": "7-12",
+      "img": "assets/products/p152-t.webp",
+      "imgs": [
+        "assets/products/p152-1.webp"
+      ],
+      "desc": "The Tennis Racket is an essential piece of equipment used in the sport of tennis. It features a frame with strings and a grip, allowing players to hit the tennis ball."
+    },
+    {
+      "id": "p139",
+      "cat": "sports",
+      "sub": "Ball Sports",
+      "name": "Leather Baseball Glove",
+      "price": 21200,
+      "oldPrice": 25000,
+      "rating": 4.7,
+      "sold": 1163,
+      "stock": 179,
+      "ship": "7-12",
+      "img": "assets/products/p139-t.webp",
+      "imgs": [
+        "assets/products/p139-1.webp",
+        "assets/products/p139-2.webp",
+        "assets/products/p139-3.webp"
+      ],
+      "desc": "The Leather Baseball Glove is a protective glove worn by baseball players. It is designed to catch and field the baseball, providing players with comfort and control during the game."
+    },
+    {
+      "id": "p144",
+      "cat": "sports",
+      "sub": "Protective Gear",
+      "name": "Cricket Helmet",
+      "price": 38200,
+      "oldPrice": 45000,
+      "rating": 4.8,
+      "sold": 1848,
+      "stock": 84,
+      "ship": "7-12",
+      "img": "assets/products/p144-t.webp",
+      "imgs": [
+        "assets/products/p144-1.webp",
+        "assets/products/p144-2.webp",
+        "assets/products/p144-3.webp"
+      ],
+      "desc": "The Cricket Helmet is a protective headgear worn by cricket players, especially batsmen and wicketkeepers. It provides protection against fast bowling and bouncers."
+    },
+    {
+      "id": "p153",
+      "cat": "sports",
+      "sub": "Ball Sports",
+      "name": "Volleyball",
+      "price": 10200,
+      "oldPrice": 17500,
+      "rating": 4.1,
+      "sold": 3081,
+      "stock": 21,
+      "ship": "7-12",
+      "img": "assets/products/p153-t.webp",
+      "imgs": [
+        "assets/products/p153-1.webp"
+      ],
+      "desc": "The Volleyball is a standard ball used in the sport of volleyball. It is designed for passing, setting, and spiking over the net during volleyball matches."
+    },
+    {
+      "id": "r1",
+      "cat": "raw",
+      "sub": "Plastics",
+      "name": "Polypropylene (PP) Granules, 25kg Bag",
+      "price": 52000,
+      "oldPrice": 61000,
+      "rating": 4.6,
+      "sold": 3120,
+      "stock": 600,
+      "ship": "25-40",
+      "img": "",
+      "desc": "Injection-grade polypropylene granules for making plastic chairs, buckets, bowls and packaging. Sold per 25kg bag."
+    },
+    {
+      "id": "r2",
+      "cat": "raw",
+      "sub": "Textiles",
+      "name": "Cotton Fabric Roll, 100 Yards",
+      "price": 98000,
+      "oldPrice": 0,
+      "rating": 4.4,
+      "sold": 980,
+      "stock": 220,
+      "ship": "20-35",
+      "img": "",
+      "desc": "Plain-weave 100% cotton fabric, 58 inches wide. Good for shirts, uniforms, bedsheets and tie-dye production."
+    },
+    {
+      "id": "r3",
+      "cat": "raw",
+      "sub": "Plastics",
+      "name": "PET Bottle Preforms 28mm, 1,000 pcs",
+      "price": 46000,
+      "oldPrice": 52000,
+      "rating": 4.5,
+      "sold": 1450,
+      "stock": 350,
+      "ship": "25-40",
+      "img": "",
+      "desc": "Clear PET preforms with a 28mm neck, ready to blow into 50cl to 75cl bottles for water, juice and liquid soap."
+    },
+    {
+      "id": "r4",
+      "cat": "raw",
+      "sub": "Metals",
+      "name": "Aluminium Sheet 1mm, 1.2m × 2.4m",
+      "price": 61000,
+      "oldPrice": 0,
+      "rating": 4.3,
+      "sold": 410,
+      "stock": 180,
+      "ship": "25-40",
+      "img": "",
+      "desc": "Flat aluminium sheet for roofing trims, signage, kitchen fittings and fabrication work."
+    },
+    {
+      "id": "r5",
+      "cat": "raw",
+      "sub": "Paper & Packaging",
+      "name": "Kraft Paper Roll 80gsm, 50kg",
+      "price": 74000,
+      "oldPrice": 82000,
+      "rating": 4.5,
+      "sold": 620,
+      "stock": 140,
+      "ship": "25-40",
+      "img": "",
+      "desc": "Brown kraft paper for paper bags, wrapping and food packaging. Strong and recyclable."
+    },
+    {
+      "id": "c1",
+      "cat": "chemicals",
+      "sub": "Soap & Detergent",
+      "name": "Caustic Soda Flakes 99%, 25kg",
+      "price": 38000,
+      "oldPrice": 43000,
+      "rating": 4.7,
+      "sold": 5210,
+      "stock": 800,
+      "ship": "25-40",
+      "img": "",
+      "desc": "Sodium hydroxide flakes for soap making, cleaning products and water treatment. Handle with gloves and goggles."
+    },
+    {
+      "id": "c2",
+      "cat": "chemicals",
+      "sub": "Soap & Detergent",
+      "name": "SLES 70%, 170kg Drum",
+      "price": 410000,
+      "oldPrice": 0,
+      "rating": 4.6,
+      "sold": 870,
+      "stock": 60,
+      "ship": "25-40",
+      "img": "",
+      "desc": "Sodium lauryl ether sulphate, the main foaming agent in liquid soap, shampoo and dishwashing liquid."
+    },
+    {
+      "id": "c3",
+      "cat": "chemicals",
+      "sub": "Food & Cosmetic Additives",
+      "name": "Citric Acid Monohydrate, 25kg",
+      "price": 44000,
+      "oldPrice": 0,
+      "rating": 4.5,
+      "sold": 1330,
+      "stock": 300,
+      "ship": "25-40",
+      "img": "",
+      "desc": "Food-grade citric acid for drinks, cleaning products and as a pH adjuster in cosmetics."
+    },
+    {
+      "id": "c4",
+      "cat": "chemicals",
+      "sub": "Soap & Detergent",
+      "name": "Glycerine 99.5%, 25kg Drum",
+      "price": 57000,
+      "oldPrice": 64000,
+      "rating": 4.6,
+      "sold": 940,
+      "stock": 200,
+      "ship": "25-40",
+      "img": "",
+      "desc": "Pure vegetable glycerine for soap, lotion, hair products and hand sanitiser."
+    },
+    {
+      "id": "c5",
+      "cat": "chemicals",
+      "sub": "Fragrance",
+      "name": "Fragrance Oil, Lavender, 5kg",
+      "price": 85000,
+      "oldPrice": 0,
+      "rating": 4.4,
+      "sold": 510,
+      "stock": 120,
+      "ship": "20-35",
+      "img": "",
+      "desc": "Concentrated fragrance oil for soap, body wash, air freshener and candles."
+    },
+    {
+      "id": "p102",
+      "cat": "gadgets",
+      "sub": "Charging",
+      "name": "Wireless Charging Pad",
+      "price": 18500,
+      "oldPrice": 26000,
+      "rating": 4.5,
+      "sold": 4210,
+      "stock": 400,
+      "ship": "7-12",
+      "img": "assets/products/p102-t.webp",
+      "imgs": [
+        "assets/products/p102-1.webp"
+      ],
+      "desc": "Slim wireless charger for phones and earbuds that support Qi charging."
+    },
+    {
+      "id": "p103",
+      "cat": "gadgets",
+      "sub": "Audio",
+      "name": "Mini Smart Speaker",
+      "price": 65000,
+      "oldPrice": 79000,
+      "rating": 4.6,
+      "sold": 1980,
+      "stock": 150,
+      "ship": "7-12",
+      "img": "assets/products/p103-t.webp",
+      "imgs": [
+        "assets/products/p103-1.webp"
+      ],
+      "desc": "Compact speaker with clear room-filling sound and voice control."
+    },
+    {
+      "id": "p104",
+      "cat": "gadgets",
+      "sub": "Charging",
+      "name": "Fast Phone Charger 20W",
+      "price": 6500,
+      "oldPrice": 9500,
+      "rating": 4.4,
+      "sold": 15200,
+      "stock": 1200,
+      "ship": "7-12",
+      "img": "assets/products/p104-t.webp",
+      "imgs": [
+        "assets/products/p104-1.webp",
+        "assets/products/p104-2.webp"
+      ],
+      "desc": "20W USB-C fast charger. A top seller for phone accessory shops."
+    },
+    {
+      "id": "p105",
+      "cat": "gadgets",
+      "sub": "Charging",
+      "name": "Magnetic Power Bank",
+      "price": 24000,
+      "oldPrice": 32000,
+      "rating": 4.5,
+      "sold": 6900,
+      "stock": 500,
+      "ship": "7-12",
+      "img": "assets/products/p105-t.webp",
+      "imgs": [
+        "assets/products/p105-1.webp",
+        "assets/products/p105-2.webp"
+      ],
+      "desc": "Snap-on magnetic battery pack that charges your phone on the go."
+    },
+    {
+      "id": "p109",
+      "cat": "gadgets",
+      "sub": "Photo & Vlogging",
+      "name": "Monopod Stand",
+      "price": 9800,
+      "oldPrice": 0,
+      "rating": 4.2,
+      "sold": 2300,
+      "stock": 300,
+      "ship": "7-12",
+      "img": "assets/products/p109-t.webp",
+      "imgs": [
+        "assets/products/p109-1.webp",
+        "assets/products/p109-2.webp"
+      ],
+      "desc": "Extendable monopod for phones and small cameras. Great for content creators."
+    },
+    {
+      "id": "p118",
+      "cat": "aesthetics",
+      "sub": "Soap & Body Wash",
+      "name": "Plant-Based Hand Soap",
+      "price": 4200,
+      "oldPrice": 5500,
+      "rating": 4.6,
+      "sold": 8800,
+      "stock": 900,
+      "ship": "10-15",
+      "img": "assets/products/p118-t.webp",
+      "imgs": [
+        "assets/products/p118-1.webp",
+        "assets/products/p118-2.webp",
+        "assets/products/p118-3.webp"
+      ],
+      "desc": "Gentle hand soap made with plant extracts. Popular with salons, hotels and supermarkets."
+    },
+    {
+      "id": "p119",
+      "cat": "aesthetics",
+      "sub": "Soap & Body Wash",
+      "name": "Shea Butter Body Wash",
+      "price": 7800,
+      "oldPrice": 9900,
+      "rating": 4.7,
+      "sold": 7300,
+      "stock": 700,
+      "ship": "10-15",
+      "img": "assets/products/p119-t.webp",
+      "imgs": [
+        "assets/products/p119-1.webp",
+        "assets/products/p119-2.webp",
+        "assets/products/p119-3.webp"
+      ],
+      "desc": "Rich moisturising body wash with shea butter for soft skin."
+    },
+    {
+      "id": "p120",
+      "cat": "aesthetics",
+      "sub": "Lotion & Cream",
+      "name": "Men's Body & Face Lotion",
+      "price": 6900,
+      "oldPrice": 0,
+      "rating": 4.5,
+      "sold": 5100,
+      "stock": 650,
+      "ship": "10-15",
+      "img": "assets/products/p120-t.webp",
+      "imgs": [
+        "assets/products/p120-1.webp",
+        "assets/products/p120-2.webp",
+        "assets/products/p120-3.webp"
+      ],
+      "desc": "Light, non-greasy lotion for face and body."
+    },
+    {
+      "id": "p11",
+      "cat": "furniture",
+      "sub": "Bedroom",
+      "name": "Upholstered King Size Bed",
+      "price": 1450000,
+      "oldPrice": 1820000,
+      "rating": 4.7,
+      "sold": 640,
+      "stock": 40,
+      "ship": "25-40",
+      "img": "assets/products/p11-t.webp",
+      "imgs": [
+        "assets/products/p11-1.webp",
+        "assets/products/p11-2.webp",
+        "assets/products/p11-3.webp"
+      ],
+      "desc": "Padded king size bed frame with a tall headboard. Mattress not included."
+    },
+    {
+      "id": "p14",
+      "cat": "furniture",
+      "sub": "Office",
+      "name": "Executive Conference Chair",
+      "price": 185000,
+      "oldPrice": 230000,
+      "rating": 4.6,
+      "sold": 1320,
+      "stock": 80,
+      "ship": "20-35",
+      "img": "assets/products/p14-t.webp",
+      "imgs": [
+        "assets/products/p14-1.webp",
+        "assets/products/p14-2.webp",
+        "assets/products/p14-3.webp"
+      ],
+      "desc": "Comfortable swivel chair for offices, boardrooms and hotels."
+    },
+    {
+      "id": "p15",
+      "cat": "furniture",
+      "sub": "Bathroom",
+      "name": "Wooden Bathroom Sink with Mirror",
+      "price": 320000,
+      "oldPrice": 0,
+      "rating": 4.4,
+      "sold": 290,
+      "stock": 25,
+      "ship": "25-40",
+      "img": "assets/products/p15-t.webp",
+      "imgs": [
+        "assets/products/p15-1.webp",
+        "assets/products/p15-2.webp",
+        "assets/products/p15-3.webp"
+      ],
+      "desc": "Wooden vanity unit with a ceramic sink and matching mirror."
+    },
+    {
+      "id": "p167",
+      "cat": "cars",
+      "sub": "Chrysler",
+      "name": "Chrysler 300 Touring",
+      "price": 38500000,
+      "oldPrice": 41000000,
+      "rating": 4.6,
+      "sold": 41,
+      "stock": 6,
+      "bulkMin": 2,
+      "ship": "45-60",
+      "img": "assets/products/p167-t.webp",
+      "imgs": [
+        "assets/products/p167-1.webp",
+        "assets/products/p167-2.webp",
+        "assets/products/p167-3.webp"
+      ],
+      "desc": "Full-size sedan with a smooth V6, leather seats and a large touchscreen. Cleared and delivered to you."
+    },
+    {
+      "id": "p168",
+      "cat": "cars",
+      "sub": "Dodge",
+      "name": "Dodge Charger SXT",
+      "price": 42000000,
+      "oldPrice": 0,
+      "rating": 4.7,
+      "sold": 33,
+      "stock": 5,
+      "bulkMin": 2,
+      "ship": "45-60",
+      "img": "assets/products/p168-t.webp",
+      "imgs": [
+        "assets/products/p168-1.webp",
+        "assets/products/p168-2.webp",
+        "assets/products/p168-3.webp"
+      ],
+      "desc": "Sporty four-door sedan with bold styling and a strong V6 engine."
+    },
+    {
+      "id": "p169",
+      "cat": "cars",
+      "sub": "Dodge",
+      "condition": "used",
+      "name": "Dodge Hornet GT Plus (Tokunbo)",
+      "price": 27500000,
+      "oldPrice": 0,
+      "rating": 4.5,
+      "sold": 18,
+      "stock": 3,
+      "bulkMin": 2,
+      "ship": "45-60",
+      "img": "assets/products/p169-t.webp",
+      "imgs": [
+        "assets/products/p169-1.webp",
+        "assets/products/p169-2.webp",
+        "assets/products/p169-3.webp"
+      ],
+      "desc": "Foreign-used compact SUV in very good condition, low mileage, inspected before shipping."
+    },
+    {
+      "id": "p170",
+      "cat": "cars",
+      "sub": "Dodge",
+      "condition": "used",
+      "name": "Dodge Durango SXT (Tokunbo)",
+      "price": 31000000,
+      "oldPrice": 0,
+      "rating": 4.6,
+      "sold": 24,
+      "stock": 4,
+      "bulkMin": 2,
+      "ship": "45-60",
+      "img": "assets/products/p170-t.webp",
+      "imgs": [
+        "assets/products/p170-1.webp",
+        "assets/products/p170-2.webp",
+        "assets/products/p170-3.webp"
+      ],
+      "desc": "Foreign-used 7-seater SUV, clean interior, inspected before shipping."
+    },
+    {
+      "id": "p171",
+      "cat": "cars",
+      "sub": "Chrysler",
+      "name": "Chrysler Pacifica Touring",
+      "price": 45000000,
+      "oldPrice": 0,
+      "rating": 4.7,
+      "sold": 15,
+      "stock": 4,
+      "bulkMin": 2,
+      "ship": "45-60",
+      "img": "assets/products/p171-t.webp",
+      "imgs": [
+        "assets/products/p171-1.webp",
+        "assets/products/p171-2.webp",
+        "assets/products/p171-3.webp"
+      ],
+      "desc": "Roomy family minivan with sliding doors and seating for seven."
+    },
+    {
+      "id": "p113",
+      "cat": "cars",
+      "sub": "Motorcycles",
+      "condition": "used",
+      "name": "150cc Motorcycle (Tokunbo)",
+      "price": 950000,
+      "oldPrice": 0,
+      "rating": 4.3,
+      "sold": 260,
+      "stock": 30,
+      "ship": "30-45",
+      "img": "assets/products/p113-t.webp",
+      "imgs": [
+        "assets/products/p113-1.webp",
+        "assets/products/p113-2.webp",
+        "assets/products/p113-3.webp"
+      ],
+      "desc": "Foreign-used everyday motorcycle, serviced and ready for the road."
+    },
+    {
+      "id": "p116",
+      "cat": "cars",
+      "sub": "Motorcycles",
+      "name": "Scooter Motorcycle",
+      "price": 1250000,
+      "oldPrice": 1400000,
+      "rating": 4.4,
+      "sold": 410,
+      "stock": 40,
+      "ship": "30-45",
+      "img": "assets/products/p116-t.webp",
+      "imgs": [
+        "assets/products/p116-1.webp",
+        "assets/products/p116-2.webp",
+        "assets/products/p116-3.webp"
+      ],
+      "desc": "Easy-to-ride scooter, good for deliveries and city trips."
+    },
+    {
+      "id": "p200",
+      "cat": "cars",
+      "sub": "Toyota",
+      "name": "Toyota Camry SE",
+      "price": 34000000,
+      "oldPrice": 0,
+      "rating": 4.7,
+      "sold": 52,
+      "stock": 7,
+      "bulkMin": 2,
+      "ship": "45-60",
+      "img": "",
+      "desc": "Reliable mid-size sedan known for low running costs and easy resale. Cleared and delivered to you."
+    },
+    {
+      "id": "p201",
+      "cat": "cars",
+      "sub": "Mercedes-Benz",
+      "name": "Mercedes-Benz C300",
+      "price": 52000000,
+      "oldPrice": 0,
+      "rating": 4.8,
+      "sold": 21,
+      "stock": 3,
+      "bulkMin": 2,
+      "ship": "45-60",
+      "img": "",
+      "desc": "Compact executive saloon with a refined cabin and strong resale value."
+    }
+  ],
+  "rates": {
+    "CNY": {
+      "name": "Chinese Yuan (RMB)",
+      "kind": "fiat",
+      "dp": 2,
+      "buy": 219,
+      "sell": 213
+    },
+    "USDT": {
+      "name": "Tether",
+      "kind": "crypto",
+      "dp": 2,
+      "buy": 1560,
+      "sell": 1535
+    },
+    "USDC": {
+      "name": "USD Coin",
+      "kind": "crypto",
+      "dp": 2,
+      "buy": 1558,
+      "sell": 1533
+    },
+    "BTC": {
+      "name": "Bitcoin",
+      "kind": "crypto",
+      "dp": 8,
+      "buy": 165000000,
+      "sell": 162500000
+    },
+    "ETH": {
+      "name": "Ethereum",
+      "kind": "crypto",
+      "dp": 6,
+      "buy": 5900000,
+      "sell": 5800000
+    },
+    "BNB": {
+      "name": "BNB",
+      "kind": "crypto",
+      "dp": 5,
+      "buy": 1050000,
+      "sell": 1030000
+    },
+    "SOL": {
+      "name": "Solana",
+      "kind": "crypto",
+      "dp": 4,
+      "buy": 310000,
+      "sell": 304000
+    },
+    "TRX": {
+      "name": "TRON",
+      "kind": "crypto",
+      "dp": 2,
+      "buy": 420,
+      "sell": 410
+    }
+  },
+  "demo_admin": {
+    "name": "Store Admin",
+    "email": "admin@demo.com",
+    "phone": "08000000000",
+    "password": "admin123",
+    "role": "admin"
+  }
+}

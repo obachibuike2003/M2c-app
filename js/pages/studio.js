@@ -68,7 +68,7 @@
           </label>
           <button type="submit" class="btn btn-primary btn-block mt-12">${icon('wand', 16)} Generate</button>
         </form>
-        <p class="small muted mt-16">Quick colour variants, while AI generation isn't connected yet</p>
+        <p class="small muted mt-16">${AI_DESIGN_ENDPOINT ? 'Or skip the prompt and pick a quick colour variant' : "Quick colour variants, while AI generation isn't connected yet"}</p>
         <div class="swatches mt-12" id="cz-swatches">
           ${TINTS.map((c) => `<button type="button" data-tint="${c}" aria-pressed="${c === ''}" aria-label="${c ? 'Colour ' + c : 'Original colour'}" style="--c:${c || '#fff'}">${c ? '' : icon('x', 14)}</button>`).join('')}
           <input type="color" id="cz-custom-tint" aria-label="Any colour" value="#e0182d">
@@ -214,10 +214,48 @@
     }
   });
 
-  /* ---------- AI generation: not wired up yet ---------- */
-  $('#ai-form').addEventListener('submit', (e) => {
+  /* ---------- AI generation ---------- */
+  // Backs onto backend/app.py's POST /api/design/generate (OpenAI). While
+  // AI_DESIGN_ENDPOINT (js/config.js) is empty, this just explains that it
+  // isn't connected rather than failing silently.
+  $('#ai-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    toast('AI design generation is not connected yet. Try the colour variants or upload your own logo.');
+    const prompt = $('#ai-prompt').value.trim();
+    if (!prompt) return showError(czError, 'Describe what you want before generating.');
+
+    if (!AI_DESIGN_ENDPOINT) {
+      toast('AI design generation is not connected yet. Try the colour variants or upload your own logo.');
+      return;
+    }
+
+    const btn = e.target.querySelector('button[type=submit]');
+    const originalLabel = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `${icon('wand', 16)} Generating…`;
+    showError(czError, '');
+
+    try {
+      const res = await fetch(AI_DESIGN_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, productName: p.name })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.image) throw new Error(data.error || 'Could not generate that design.');
+
+      design.logo = data.image;
+      logoImg.src = design.logo;
+      Object.assign(design, { x: 0.5, y: 0.48, size: 0.28, rot: 0 });
+      $('#cz-size').value = design.size;
+      $('#cz-rot').value = 0;
+      $('#cz-hint').textContent = 'Drag the logo to move it.';
+      toast('Design generated, on a white background — drag it into place');
+    } catch (err) {
+      showError(czError, err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = originalLabel;
+    }
   });
 
   /* ---------- add the customised order to the cart ---------- */

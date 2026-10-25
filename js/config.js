@@ -24,3 +24,11 @@ const SEED_BULK = {
 // POSTs { messages, user } to it and shows the "reply" text it returns. Keep any AI API key
 // on that server, never in this file.
 const ASSISTANT_ENDPOINT = '';
+
+// Optional: the web address of the backend's image-generation route (see
+// backend/app.py, POST /api/design/generate). While it is empty, AiStudio's
+// "Generate" button just explains that AI generation isn't connected yet.
+// When set, it POSTs { prompt } and expects either { image: "data:..." } or
+// { error: "..." } back. Run the Flask backend locally and point this at it,
+// e.g. 'http://127.0.0.1:5000/api/design/generate'.
+const AI_DESIGN_ENDPOINT = '';
