@@ -738,37 +738,60 @@ def get_order(order_id):
 @app.post("/api/orders")
 @login_required
 def place_order():
-    """Body: { items: [{ productId, qty, custom? }], address: {...}, pay: "wallet"|"delivery" }
-    This takes the items directly rather than reading a server-side cart, since
-    there's no cart endpoint wired up yet either - add one and swap this out
-    for `cart_lines_for(current_user)` when the frontend is connected."""
+    """Body: { items: [{ productId, qty, custom? }], address: {...}, pay: "delivery" }
+    Prices are worked out here, never taken from the request: business buyers
+    get the bulk tiers and must meet each item's minimum, same rules as the
+    site's Store.unitPrice / bulkMin. Used by the mobile app; the website still
+    keeps its orders in the browser for now.
+
+    Only pay-on-delivery is accepted: wallet balances aren't on the server yet,
+    so a "wallet" order couldn't actually be charged."""
     data = request.get_json(silent=True) or {}
     items = data.get("items") or []
     address = data.get("address") or {}
-    pay = data.get("pay", "wallet")
-
+    if data.get("pay", "delivery") != "delivery":
+        return jsonify({"error": "Only pay on delivery is available here for now."}), 400
     if not items:
         return jsonify({"error": "Your cart is empty."}), 400
 
+    business = current_user.mode == "business"
+    wanted = {}
+    for line in items:
+        pid = line.get("productId")
+        try:
+            qty = int(line.get("qty") or 0)
+        except (TypeError, ValueError):
+            qty = 0
+        if not pid or qty < 1:
+            return jsonify({"error": "One of the items in your order is invalid."}), 400
+        wanted[pid] = wanted.get(pid, 0) + qty
+
     order_items = []
     subtotal = 0
-    for line in items:
-        product = Product.query.get(line.get("productId"))
-        qty = int(line.get("qty") or 0)
-        if not product or qty < 1:
-            return jsonify({"error": "One of the items in your order is invalid."}), 400
+    for pid, qty in wanted.items():
+        product = db.session.get(Product, pid, with_for_update=True)
+        if not product:
+            return jsonify({"error": "One of the items in your order is no longer sold."}), 400
         if qty > product.stock:
             return jsonify({"error": f'Only {product.stock} left of "{product.name}".'}), 400
-        order_items.append(OrderItem(product_id=product.id, name=product.name, price=product.price,
-                                      qty=qty, custom=line.get("custom")))
-        subtotal += product.price * qty
+        minimum = (product.bulk_min or BULK_MIN_QTY) if business else 1
+        if qty < minimum:
+            return jsonify({"error": f'Business orders need at least {minimum} of "{product.name}".'}), 400
+        off = max([t["off"] for t in BULK_TIERS if qty >= t["from"]], default=0) if business else 0
+        # floor(x + 0.5) rounds halves up like the site's Math.round and Dart's
+        # round(); Python's round() would send 28.5 to 28 and disagree by ₦1.
+        unit = math.floor(product.price * (1 - off / 100) + 0.5)
+        order_items.append(OrderItem(product_id=product.id, name=product.name, price=unit, qty=qty))
+        subtotal += unit * qty
+        product.stock -= qty
+        product.sold = (product.sold or 0) + qty
 
     delivery_fee = 0 if subtotal >= FREE_SHIPPING_FROM else SHIPPING_FEE
     total = subtotal + delivery_fee
 
     order = Order(id="ORD-" + uuid.uuid4().hex[:6].upper(), user_id=current_user.id, mode=current_user.mode,
                   status="Order placed", stage=0, subtotal=subtotal, delivery_fee=delivery_fee, total=total,
-                  address=address, pay=pay, tracking=[{"stage": 0, "at": now().isoformat()}], items=order_items)
+                  address=address, pay="delivery", tracking=[{"stage": 0, "at": now().isoformat()}], items=order_items)
     db.session.add(order)
     db.session.commit()
 
