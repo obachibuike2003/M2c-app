@@ -1,3 +1,5 @@
+// Runs once Store.ready has loaded the catalogue and account from the server.
+Store.ready.then(() => {
 (function () {
   const root = $('#studio-root');
   const user = requireBusiness(root);
@@ -283,3 +285,5 @@
     location.href = 'cart.html';
   });
 })();
+
+});

@@ -1,3 +1,5 @@
+// Runs once Store.ready has loaded the catalogue and account from the server.
+Store.ready.then(() => {
 mountChrome('login');
 
 (function () {
@@ -41,8 +43,7 @@ mountChrome('login');
         <label class="field"><span>Password</span><input name="password" type="password" autocomplete="current-password" required minlength="6"></label>
         <p class="form-error" id="auth-error" role="alert" hidden></p>
         <button class="btn btn-primary btn-block mt-16" type="submit">Sign in</button>
-      </form>
-      <p class="notice mt-16">Demo admin login: <b>${esc(DEMO_ADMIN.email)}</b> with password <b>${esc(DEMO_ADMIN.password)}</b></p>`;
+      </form>`;
   }
 
   function renderStep1() {
@@ -196,13 +197,28 @@ mountChrome('login');
     if (e.target.id === 'terms-check') $('#terms-continue').disabled = !e.target.checked;
   });
 
-  root.addEventListener('submit', (e) => {
+  // Sign-in and sign-up go to the server: lock the button meanwhile so a slow
+  // connection can't send the same request twice.
+  async function withBusy(form, work) {
+    const btn = form.querySelector('button[type=submit]');
+    const label = btn && btn.textContent;
+    if (btn) { btn.disabled = true; btn.textContent = 'Please wait…'; }
+    try {
+      return await work();
+    } finally {
+      if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = label; }
+    }
+  }
+
+  root.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.target));
+    const form = e.target;
+    const data = Object.fromEntries(new FormData(form));
     const error = $('#auth-error');
+    showError(error, '');
 
     if (mode === 'in') {
-      const res = Store.login(data.email, data.password);
+      const res = await withBusy(form, () => Store.login(data.email, data.password));
       if (!res.ok) return showError(error, res.error);
       location.href = next || (res.user.role === 'admin' ? 'admin.html' : 'index.html');
       return;
@@ -212,7 +228,7 @@ mountChrome('login');
     if (!otpSent) return;
     if ((data.otp || '').trim() !== otpCode) return showError(error, 'That code is not right. Check the toast and try again.');
     if (data.password.length < 6) return showError(error, 'Your password needs at least 6 characters.');
-    const res = Store.signup({ name: data.name, phone: data.phone, email: data.email, whatsapp: data.phone, password: data.password });
+    const res = await withBusy(form, () => Store.signup({ name: data.name, phone: data.phone, email: data.email, whatsapp: data.phone, password: data.password }));
     if (!res.ok) return showError(error, res.error);
     step = 2;
     render();
@@ -220,3 +236,5 @@ mountChrome('login');
 
   render();
 })();
+
+});

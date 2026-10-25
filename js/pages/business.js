@@ -1,3 +1,5 @@
+// Runs once Store.ready has loaded the catalogue and account from the server.
+Store.ready.then(() => {
 mountChrome('business');
 
 (function () {
@@ -91,3 +93,5 @@ mountChrome('business');
 
   if (location.hash === '#agent') $('#agent').scrollIntoView({ block: 'start' });
 })();
+
+});

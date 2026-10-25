@@ -1,3 +1,5 @@
+// Runs once Store.ready has loaded the catalogue and account from the server.
+Store.ready.then(() => {
 mountChrome('exchange');
 
 (function () {
@@ -154,3 +156,5 @@ mountChrome('exchange');
   renderForm();
   renderSide();
 })();
+
+});

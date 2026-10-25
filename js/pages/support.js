@@ -1,3 +1,5 @@
+// Runs once Store.ready has loaded the catalogue and account from the server.
+Store.ready.then(() => {
 mountChrome('account');
 
 (function () {
@@ -39,3 +41,5 @@ mountChrome('account');
 
     <p class="small muted mt-16">${esc(APP.supportEmail)} · Demo build: support messages are not actually sent anywhere.</p>`;
 })();
+
+});

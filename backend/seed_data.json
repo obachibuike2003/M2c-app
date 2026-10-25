@@ -1952,7 +1952,6 @@
     "name": "Store Admin",
     "email": "admin@demo.com",
     "phone": "08000000000",
-    "password": "admin123",
     "role": "admin"
   }
 }

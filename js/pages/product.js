@@ -1,3 +1,5 @@
+// Runs once Store.ready has loaded the catalogue and account from the server.
+Store.ready.then(() => {
 mountChrome('shop');
 document.body.classList.add('product-detail-page');
 
@@ -219,3 +221,5 @@ document.body.classList.add('product-detail-page');
     $('#related-section').hidden = false;
   }
 })();
+
+});

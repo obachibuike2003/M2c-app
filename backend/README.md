@@ -1,13 +1,18 @@
-# Easy2buy backend (Flask) — mostly a scaffold, one route actually connected
+# Easy2buy backend (Flask)
 
-This is a standalone Flask + SQLAlchemy API that mirrors the data model the
-frontend currently keeps in the browser (`localStorage`, via `../js/store.js`).
-**Almost nothing in the frontend calls this yet** — the site still runs on
-`Store.*`/localStorage for everything except one feature: AiStudio's
-"Generate" button (`js/pages/studio.js`) calls `POST /api/design/generate`
-here, which calls OpenAI's image API, so that one thing needs this backend
-actually running. Every other route exists so the backend can be built and
-tested on its own before the rest gets wired up.
+The site's **accounts and product catalogue** live here. On every page load
+`../js/store.js` fetches `GET /api/bootstrap` (catalogue + signed-in account)
+into a local copy that pages render from; saves update that copy at once and
+go to this API in the background.
+
+Login is a signed token (`Authorization: Bearer ...`), not a cookie: the site
+and this API are on different domains, and Brave/Safari block cross-site
+cookies by default.
+
+**Still browser-only for now:** cart, orders, wallet/exchange, reviews and
+agent chat stay in each visitor's `localStorage`. The order/review routes
+below exist but the site doesn't call them yet. Because orders are still
+local, product stock isn't reduced on the server when someone buys.
 
 ## Why it exists now
 
@@ -34,7 +39,8 @@ python app.py                   # serves on http://127.0.0.1:5000
 
 `flask --app app.py seed` is safe to re-run — it upserts by id rather than
 duplicating rows. It also creates the demo admin user from `data.js`
-(`admin@demo.com` / `admin123`).
+(`admin@demo.com`), with the password from `ADMIN_PASSWORD` in `.env` — or, if
+that's unset, a random one printed once to the console/log.
 
 To actually use the "Generate" button in AiStudio:
 1. Get an OpenAI API key at https://platform.openai.com/api-keys (needs
@@ -133,15 +139,21 @@ straight there.
 | GET | `/api/products/<id>` | single product |
 | GET | `/api/products/<id>/reviews` | reviews for a product |
 | POST | `/api/products/<id>/reviews` | `{ rating, text }`, requires login |
-| POST | `/api/auth/signup` | `{ name, email, phone, password }` |
-| POST | `/api/auth/login` | `{ email, password }` |
-| POST | `/api/auth/logout` | requires login |
-| GET | `/api/auth/me` | current session user, or `null` |
+| GET | `/api/bootstrap` | catalogue + signed-in account (+ all accounts for an admin); what every page loads |
+| POST | `/api/auth/signup` | `{ name, email, phone, password, profile? }` → `{ user, token }` |
+| POST | `/api/auth/login` | `{ email, password }` → `{ user, token }` |
+| GET | `/api/auth/me` | signed-in account, or `null` |
+| PATCH | `/api/auth/me` | the site's copy of the account + `_seq`; older `_seq` is ignored |
+| PATCH | `/api/admin/users/<id>` | admin only; changed fields, e.g. `{ verify }` |
+| PUT / DELETE | `/api/admin/products/<id>` | admin only; create/update or delete |
+| PUT / DELETE | `/api/admin/categories/<id>` | admin only; create/update or delete |
 | GET | `/api/orders` | current user's orders, requires login |
 | POST | `/api/orders` | `{ items: [{ productId, qty, custom? }], address, pay }`, requires login |
 | GET | `/api/orders/<id>` | requires login; owner or admin only |
 | GET | `/api/recommendations` | `?limit=15`; personalised if logged in, popularity-sorted otherwise |
 | POST | `/api/design/generate` | `{ prompt, productName? }` → `{ image: "data:image/png;base64,..." }`. **No login required** — see the warning in `app.py` section 7 before this goes anywhere public. |
+
+"Requires login" means an `Authorization: Bearer <token>` header from signup/login.
 
 ## Not built yet
 

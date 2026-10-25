@@ -1,3 +1,5 @@
+// Runs once Store.ready has loaded the catalogue and account from the server.
+Store.ready.then(() => {
 mountChrome('cart');
 
 (function () {
@@ -81,3 +83,5 @@ mountChrome('cart');
     location.href = 'orders.html?placed=' + encodeURIComponent(res.order.id);
   });
 })();
+
+});

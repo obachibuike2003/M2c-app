@@ -1,3 +1,5 @@
+// Runs once Store.ready has loaded the catalogue and account from the server.
+Store.ready.then(() => {
 mountChrome('home');
 
 (function () {
@@ -135,3 +137,5 @@ mountChrome('home');
 
   renderRecommended();
 })();
+
+});

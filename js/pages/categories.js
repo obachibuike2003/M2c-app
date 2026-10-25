@@ -1,3 +1,5 @@
+// Runs once Store.ready has loaded the catalogue and account from the server.
+Store.ready.then(() => {
 mountChrome('shop');
 
 (function () {
@@ -13,3 +15,5 @@ mountChrome('shop');
     </a>`).join('');
   observeReveals();
 })();
+
+});

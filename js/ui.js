@@ -599,6 +599,12 @@ function mountChrome(active) {
     location.href = 'products.html?visual=1';
   });
 
-  // Page scripts render after this runs, so wait for them before wiring up reveals.
-  document.addEventListener('DOMContentLoaded', () => observeReveals());
+  // Page scripts render right after this runs (once Store.ready has the data),
+  // so wire up reveals on the next tick, after they've drawn.
+  setTimeout(() => observeReveals());
 }
+
+// A save that didn't reach the server (see Store's sync()).
+window.addEventListener('store:sync-error', (e) => {
+  toast(`Not saved to the server: ${e.detail}`, 'error');
+});

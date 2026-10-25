@@ -22,6 +22,7 @@ import json
 import math
 import os
 import re
+import secrets
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -31,9 +32,10 @@ import requests
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from flask_login import (LoginManager, UserMixin, current_user, login_required,
-                          login_user, logout_user)
+from flask_login import LoginManager, UserMixin, current_user, login_required
 from flask_sqlalchemy import SQLAlchemy
+from functools import wraps
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from werkzeug.security import check_password_hash, generate_password_hash
 
 load_dotenv()
@@ -65,13 +67,17 @@ login_manager = LoginManager(app)
 # permission to call this API. Override with CORS_ORIGINS (comma-separated).
 FRONTEND_URL = "https://m2c-app-vqeb.onrender.com"
 CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()]
-CORS(app, supports_credentials=True, origins=CORS_ORIGINS or [FRONTEND_URL])
+CORS(app, origins=CORS_ORIGINS or [FRONTEND_URL])
 
-# Frontend and API on different domains means the login cookie is cross-site,
-# which browsers only send when it's SameSite=None and Secure (HTTPS only).
-if os.environ.get("CROSS_SITE_COOKIES", "1") == "1":
-    app.config.update(SESSION_COOKIE_SAMESITE="None", SESSION_COOKIE_SECURE=True,
-                      REMEMBER_COOKIE_SAMESITE="None", REMEMBER_COOKIE_SECURE=True)
+# Login uses a signed token the site sends as "Authorization: Bearer ...",
+# not a cookie: the site and this API are on different domains, and Brave and
+# Safari block cross-site cookies by default, so cookie login would fail there.
+_tokens = URLSafeTimedSerializer(app.config["SECRET_KEY"], salt="auth-token")
+TOKEN_MAX_AGE = 60 * 60 * 24 * 30  # 30 days
+
+
+def issue_token(user):
+    return _tokens.dumps(user.id)
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 
@@ -93,7 +99,8 @@ class Category(db.Model):
     name = db.Column(db.String(120), nullable=False)
     icon = db.Column(db.String(40), default="box")
     hue = db.Column(db.Integer, default=220)
-    img = db.Column(db.String(255), default="")
+    img = db.Column(db.Text, default="")  # a URL, or an uploaded image as a data: URL
+    sort = db.Column(db.Integer, default=0, index=True)  # display order
 
     products = db.relationship("Product", back_populates="category")
 
@@ -145,6 +152,12 @@ class User(db.Model, UserMixin):
     balances = db.Column(db.JSON, default=dict)  # per currency code, e.g. {"NGN": 50000}
     favs = db.Column(db.JSON, default=list)  # favourited product ids
 
+    # Everything else the site keeps on an account (business details, brand kit,
+    # address, verification, wallet balances, favourites...), in the site's own
+    # shape. mode / business / favs are also mirrored into the columns above so
+    # recommend_products() can use them.
+    profile = db.Column(db.JSON, default=dict)
+
     created_at = db.Column(db.DateTime, default=now)
 
     business_type = db.relationship("BusinessType")
@@ -158,16 +171,38 @@ class User(db.Model, UserMixin):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-    def to_dict(self, include_private=False):
-        data = {
-            "id": self.id, "name": self.name, "role": self.role, "mode": self.mode,
-            "businessName": self.business_name, "businessType": self.business_type_id,
-            "agentId": self.agent_id, "verifyStatus": self.verify_status,
+    def to_dict(self):
+        """The account in the exact shape the site's js/store.js works with."""
+        return {
+            **{k: v for k, v in (self.profile or {}).items() if k != "_seq"},
+            "id": self.id, "name": self.name, "email": self.email, "phone": self.phone,
+            "whatsapp": self.whatsapp, "role": self.role,
+            "createdAt": int(self.created_at.timestamp() * 1000) if self.created_at else None,
         }
-        if include_private:
-            data.update({"email": self.email, "phone": self.phone, "whatsapp": self.whatsapp,
-                         "balances": self.balances or {}, "favs": self.favs or []})
-        return data
+
+    def apply_patch(self, patch):
+        """Merge site-side account changes. role and email can never be set this way."""
+        prof = dict(self.profile or {})
+        for key, value in (patch or {}).items():
+            if key in ("name", "phone", "whatsapp"):
+                setattr(self, key, str(value or "").strip()[:120])
+            elif key in PROFILE_KEYS:
+                prof[key] = value
+        self.profile = prof  # reassigned so SQLAlchemy notices the JSON changed
+
+        self.mode = prof.get("mode") if prof.get("mode") in ("personal", "business") else "personal"
+        biz = prof.get("business") or {}
+        self.business_name = (biz.get("name") or None) if isinstance(biz, dict) else None
+        biz_type = biz.get("type") if isinstance(biz, dict) else None
+        self.business_type_id = biz_type if biz_type and db.session.get(BusinessType, biz_type) else None
+        self.favs = prof.get("favs") if isinstance(prof.get("favs"), list) else []
+        verify = prof.get("verify")
+        self.verify_status = verify.get("status", "none") if isinstance(verify, dict) else "none"
+
+
+# Account fields the site may write through PATCH. Anything else is ignored.
+PROFILE_KEYS = {"mode", "business", "brand", "verify", "address", "termsAcceptedAt",
+                "balances", "favs", "agentId"}
 
 
 class Product(db.Model):
@@ -185,9 +220,11 @@ class Product(db.Model):
     ship = db.Column(db.String(20), default="7-15")
     condition = db.Column(db.String(10), default="new")  # new | used
     bulk_min = db.Column(db.Integer)  # overrides the default bulk minimum when set
-    img = db.Column(db.String(255), default="")
+    img = db.Column(db.Text, default="")  # a URL, or an uploaded image as a data: URL
     imgs = db.Column(db.JSON, default=list)
+    gif = db.Column(db.Text, default="")  # optional moving view shown first in the gallery
     desc = db.Column(db.Text, default="")
+    sort = db.Column(db.Integer, default=0, index=True)  # display order; new products go first
 
     category = db.relationship("Category", back_populates="products")
     reviews = db.relationship("Review", back_populates="product")
@@ -198,8 +235,25 @@ class Product(db.Model):
             "price": self.price, "oldPrice": self.old_price, "rating": self.rating,
             "sold": self.sold, "stock": self.stock, "ship": self.ship,
             "condition": self.condition, "bulkMin": self.bulk_min,
-            "img": self.img, "imgs": self.imgs or [], "desc": self.desc,
+            "img": self.img, "imgs": self.imgs or [], "gif": self.gif or "", "desc": self.desc,
         }
+
+    def apply(self, d):
+        """Set fields from the site's product shape (as saved by the admin panel)."""
+        self.cat_id = d.get("cat", self.cat_id)
+        self.name = str(d.get("name", self.name) or "").strip()[:200]
+        for key, attr in (("price", "price"), ("oldPrice", "old_price"), ("stock", "stock"), ("sold", "sold")):
+            if key in d:
+                setattr(self, attr, int(d.get(key) or 0))
+        if "bulkMin" in d:
+            self.bulk_min = int(d.get("bulkMin") or 0) or None
+        if "rating" in d:
+            self.rating = float(d.get("rating") or 0)
+        for key in ("sub", "ship", "condition", "img", "gif", "desc"):
+            if key in d:
+                setattr(self, key, d.get(key) or ("" if key != "sub" else None))
+        if "imgs" in d:
+            self.imgs = d.get("imgs") or []
 
 
 class Order(db.Model):
@@ -290,9 +344,31 @@ def load_user(user_id):
     return db.session.get(User, user_id)
 
 
+@login_manager.request_loader
+def load_user_from_token(req):
+    header = req.headers.get("Authorization", "")
+    if not header.startswith("Bearer "):
+        return None
+    try:
+        user_id = _tokens.loads(header[7:], max_age=TOKEN_MAX_AGE)
+    except (BadSignature, SignatureExpired):
+        return None
+    return db.session.get(User, user_id)
+
+
 @login_manager.unauthorized_handler
 def unauthorized():
     return jsonify({"error": "Please sign in first."}), 401
+
+
+def admin_required(view):
+    @wraps(view)
+    @login_required
+    def wrapper(*args, **kwargs):
+        if current_user.role != "admin":
+            return jsonify({"error": "Admins only."}), 403
+        return view(*args, **kwargs)
+    return wrapper
 
 
 # ---------------------------------------------------------------------------
@@ -397,7 +473,7 @@ def health():
 
 @app.get("/api/categories")
 def list_categories():
-    rows = Category.query.order_by(Category.name).all()
+    rows = Category.query.order_by(Category.sort, Category.name).all()
     return jsonify([c.to_dict() for c in rows])
 
 
@@ -498,13 +574,14 @@ def signup():
         return jsonify({"error": "An account with this email already exists."}), 409
 
     user = User(id="u_" + uuid.uuid4().hex[:12], name=name, email=email, phone=phone,
-                whatsapp=data.get("whatsapp") or phone, balances={}, favs=[])
+                whatsapp=data.get("whatsapp") or phone, profile={})
     user.set_password(password)
+    # Starting account fields from the site (empty wallet, personal mode...).
+    user.apply_patch(data.get("profile") or {"mode": "personal", "favs": []})
     db.session.add(user)
     db.session.commit()
 
-    login_user(user)
-    return jsonify(user.to_dict(include_private=True)), 201
+    return jsonify({"user": user.to_dict(), "token": issue_token(user)}), 201
 
 
 @app.post("/api/auth/login")
@@ -517,22 +594,127 @@ def login():
     if not user or not user.check_password(password):
         return jsonify({"error": "Wrong email or password."}), 401
 
-    login_user(user)
-    return jsonify(user.to_dict(include_private=True))
-
-
-@app.post("/api/auth/logout")
-@login_required
-def logout():
-    logout_user()
-    return jsonify({"ok": True})
+    return jsonify({"user": user.to_dict(), "token": issue_token(user)})
 
 
 @app.get("/api/auth/me")
 def me():
     if not current_user.is_authenticated:
         return jsonify(None)
-    return jsonify(current_user.to_dict(include_private=True))
+    return jsonify(current_user.to_dict())
+
+
+@app.patch("/api/auth/me")
+@login_required
+def update_me():
+    """The site sends its full copy of the account plus `_seq`, an always-
+    increasing number. Saves can arrive out of order (they're sent without
+    waiting, so they survive the page changing), so an older one that turns up
+    late is ignored instead of overwriting newer data."""
+    data = request.get_json(silent=True) or {}
+    seq = data.pop("_seq", None)
+    last = (current_user.profile or {}).get("_seq") or 0
+    if isinstance(seq, (int, float)) and seq <= last:
+        return jsonify(current_user.to_dict())
+    current_user.apply_patch(data)
+    if isinstance(seq, (int, float)):
+        current_user.profile = {**current_user.profile, "_seq": seq}
+    db.session.commit()
+    return jsonify(current_user.to_dict())
+
+
+# --- bootstrap: everything a page needs, in one request ----------------------
+
+@app.get("/api/bootstrap")
+def bootstrap():
+    user = current_user if current_user.is_authenticated else None
+    data = {
+        "categories": [c.to_dict() for c in Category.query.order_by(Category.sort, Category.name).all()],
+        "products": [p.to_dict() for p in Product.query.order_by(Product.sort, Product.id).all()],
+        "user": user.to_dict() if user else None,
+    }
+    if user and user.role == "admin":
+        data["users"] = [u.to_dict() for u in User.query.order_by(User.created_at).all()]
+    return jsonify(data)
+
+
+# --- admin: catalogue and accounts -----------------------------------------
+
+@app.patch("/api/admin/users/<user_id>")
+@admin_required
+def admin_update_user(user_id):
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({"error": "User not found."}), 404
+    user.apply_patch(request.get_json(silent=True) or {})
+    db.session.commit()
+    return jsonify(user.to_dict())
+
+
+@app.put("/api/admin/categories/<cat_id>")
+@admin_required
+def admin_save_category(cat_id):
+    d = request.get_json(silent=True) or {}
+    name = str(d.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "Enter a category name."}), 400
+    cat = db.session.get(Category, cat_id)
+    if not cat:
+        last = db.session.query(db.func.max(Category.sort)).scalar() or 0
+        cat = Category(id=cat_id[:40], sort=last + 1)
+        db.session.add(cat)
+    cat.name = name[:120]
+    cat.icon = d.get("icon") or "box"
+    cat.hue = int(d.get("hue") or 0)
+    cat.img = d.get("img") or ""
+    db.session.commit()
+    return jsonify(cat.to_dict())
+
+
+@app.delete("/api/admin/categories/<cat_id>")
+@admin_required
+def admin_delete_category(cat_id):
+    if Product.query.filter_by(cat_id=cat_id).first():
+        return jsonify({"error": "Move or delete the products in this category first."}), 409
+    cat = db.session.get(Category, cat_id)
+    if cat:
+        db.session.delete(cat)
+        db.session.commit()
+    return jsonify({"ok": True})
+
+
+@app.put("/api/admin/products/<product_id>")
+@admin_required
+def admin_save_product(product_id):
+    d = request.get_json(silent=True) or {}
+    if not db.session.get(Category, d.get("cat")):
+        return jsonify({"error": "Pick a category that exists."}), 400
+    product = db.session.get(Product, product_id)
+    if not product:
+        # New products show first, like the site's own list does.
+        first = db.session.query(db.func.min(Product.sort)).scalar() or 0
+        product = Product(id=product_id[:40], sort=first - 1)
+        db.session.add(product)
+    product.apply(d)
+    if not product.name or not product.price or product.price < 1:
+        db.session.rollback()
+        return jsonify({"error": "A product needs a name and a price above zero."}), 400
+    db.session.commit()
+    return jsonify(product.to_dict())
+
+
+@app.delete("/api/admin/products/<product_id>")
+@admin_required
+def admin_delete_product(product_id):
+    product = db.session.get(Product, product_id)
+    if not product:
+        return jsonify({"ok": True})
+    if OrderItem.query.filter_by(product_id=product_id).first():
+        return jsonify({"error": "This product is in past orders, so it can't be deleted. Set its stock to 0 instead."}), 409
+    Review.query.filter_by(product_id=product_id).delete()
+    db.session.delete(product)
+    db.session.commit()
+    return jsonify({"ok": True})
 
 
 # --- orders ------------------------------------------------------------
@@ -681,8 +863,9 @@ def seed_database():
     with open(SEED_PATH, encoding="utf-8") as f:
         data = json.load(f)
 
-    for row in data["categories"]:
-        db.session.merge(Category(id=row["id"], name=row["name"], icon=row["icon"], hue=row["hue"], img=row["img"]))
+    for i, row in enumerate(data["categories"]):
+        db.session.merge(Category(id=row["id"], name=row["name"], icon=row["icon"], hue=row["hue"],
+                                  img=row["img"], sort=i))
 
     for row in data["business_types"]:
         db.session.merge(BusinessType(id=row["id"], name=row["name"], cats=row["cats"]))
@@ -690,20 +873,28 @@ def seed_database():
     for row in data["agents"]:
         db.session.merge(Agent(id=row["id"], name=row["name"], phone=row["phone"], whatsapp=row["whatsapp"]))
 
-    for row in data["products"]:
+    for i, row in enumerate(data["products"]):
         db.session.merge(Product(
             id=row["id"], cat_id=row["cat"], sub=row.get("sub"), name=row["name"],
             price=row["price"], old_price=row.get("oldPrice", 0), rating=row.get("rating", 0),
             sold=row.get("sold", 0), stock=row.get("stock", 0), ship=row.get("ship", "7-15"),
             condition=row.get("condition", "new"), bulk_min=row.get("bulkMin"),
-            img=row.get("img", ""), imgs=row.get("imgs", []), desc=row.get("desc", ""),
+            img=row.get("img", ""), imgs=row.get("imgs", []), gif=row.get("gif", ""),
+            desc=row.get("desc", ""), sort=i,
         ))
 
+    # The admin's password is never the public demo one from seed_data.json:
+    # it comes from ADMIN_PASSWORD, or is generated and printed to the log once.
     admin = data["demo_admin"]
     if not db.session.get(User, "u_admin"):
-        user = User(id="u_admin", name=admin["name"], email=admin["email"], phone=admin["phone"], role="admin")
-        user.set_password(admin["password"])
+        password = os.environ.get("ADMIN_PASSWORD") or secrets.token_urlsafe(12)
+        user = User(id="u_admin", name=admin["name"], email=admin["email"], phone=admin["phone"],
+                    role="admin", profile={})
+        user.set_password(password)
+        user.apply_patch({"mode": "personal", "favs": []})
         db.session.add(user)
+        if not os.environ.get("ADMIN_PASSWORD"):
+            print(f"Created admin {admin['email']} with generated password: {password}", flush=True)
 
     db.session.commit()
     return {

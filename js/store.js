@@ -1,9 +1,17 @@
-// Data layer. Everything is kept in the browser's localStorage, so this is a demo:
-// no real money moves and data stays on this device. Swap these functions for
-// API calls when a backend is added.
+// Data layer.
+//
+// Accounts and the product catalogue live on the backend (API_BASE in config.js).
+// Every function here stays synchronous, so pages don't have to change: on each
+// page load `Store.ready` fetches the catalogue and the signed-in account into a
+// local copy, pages render from that copy, and saves update the copy at once
+// while being sent to the server in the background.
+//
+// Orders, cart, wallet, exchange, reviews and agent chat are still kept only in
+// this browser's localStorage for now, so they're a demo: no real money moves.
 
 const Store = (() => {
   const PREFIX = 'mp_';
+  const API = String(typeof API_BASE === 'string' ? API_BASE : '').replace(/\/$/, '');
 
   function read(key, fallback) {
     try {
@@ -22,6 +30,62 @@ const Store = (() => {
       return false;
     }
   }
+
+  function remove(key) {
+    try { localStorage.removeItem(PREFIX + key); } catch (e) { /* ignore */ }
+  }
+
+  /* ---------- talking to the backend ---------- */
+
+  const token = () => read('token', null);
+
+  async function api(method, path, body, { keepalive = false, signal } = {}) {
+    const headers = {};
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    if (token()) headers.Authorization = 'Bearer ' + token();
+    let res;
+    try {
+      res = await fetch(API + path, {
+        method, headers, keepalive, signal,
+        body: body === undefined ? undefined : JSON.stringify(body)
+      });
+    } catch (e) {
+      throw new Error('Could not reach the server. Check your connection and try again.');
+    }
+    let data = null;
+    try { data = await res.json(); } catch (e) { /* empty body */ }
+    if (!res.ok) throw new Error((data && data.error) || `The server said no (${res.status}).`);
+    return data;
+  }
+
+  // Saves go out without waiting, so the page can carry on (or move to another
+  // page) straight away. `keepalive` lets a small request finish even after the
+  // page has gone; browsers cap that at 64 KB, so big ones (images) go without.
+  // A failed save fires "store:sync-error", which ui.js shows as a message.
+  const inflight = new Set();
+  function sync(method, path, body) {
+    if (!API) return;
+    const small = JSON.stringify(body || {}).length < 60000;
+    const p = api(method, path, body, { keepalive: small })
+      .catch((e) => {
+        try { window.dispatchEvent(new CustomEvent('store:sync-error', { detail: e.message })); } catch (_) { /* ignore */ }
+      })
+      .finally(() => inflight.delete(p));
+    inflight.add(p);
+  }
+  // Waits for saves still on their way, for the rare page that must be sure first.
+  const flush = () => Promise.all([...inflight]);
+
+  // Account saves carry an always-rising number so the server can drop one that
+  // arrives after a newer one (see PATCH /api/auth/me).
+  let seqCounter = 0;
+  const nextSeq = () => Date.now() * 1000 + (seqCounter++ % 1000);
+
+  // Fills in anything an account from the server might not have yet.
+  const normUser = (u) => u && {
+    mode: 'personal', favs: [], ...u,
+    balances: { ...emptyBalances(), ...(u.balances || {}) }
+  };
 
   const uid = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const round = (n, dp) => Math.round((n + Number.EPSILON) * 10 ** dp) / 10 ** dp;
@@ -49,9 +113,9 @@ const Store = (() => {
     if (!read('agents')) write('agents', SEED_AGENTS);
     if (!read('bulk')) write('bulk', SEED_BULK);
     if (!read('rates')) write('rates', SEED_RATES);
-    if (!read('users')) {
-      write('users', [{ id: 'u_admin', ...DEMO_ADMIN, balances: emptyBalances(), createdAt: Date.now() }]);
-    }
+    // Accounts used to live here too; they're on the server now.
+    remove('session');
+    if (read('users', []).some((u) => 'password' in u)) remove('users');
     const list = read('orders', []);
     if (list.some((o) => o.stage === undefined)) {
       list.forEach((o) => {
@@ -66,11 +130,39 @@ const Store = (() => {
     if (c.some((l) => !l.key)) write('cart', c.map((l) => ({ key: l.id, ...l })));
   }
 
+  // Clears this browser's demo data (cart, orders, wallet...). Accounts and the
+  // catalogue are on the server, so they come straight back on the next load.
   function resetDemo() {
     Object.keys(localStorage)
-      .filter((k) => k.startsWith(PREFIX))
+      .filter((k) => k.startsWith(PREFIX) && k !== PREFIX + 'token')
       .forEach((k) => localStorage.removeItem(k));
     seed();
+  }
+
+  // Runs on every page load: pulls the catalogue and the signed-in account from
+  // the server into the local copy. If the server can't be reached, the page
+  // still works from whatever was saved last time.
+  async function load() {
+    if (!API) return;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 10000);
+    try {
+      const data = await api('GET', '/api/bootstrap', undefined, { signal: ctrl.signal });
+      write('categories', data.categories);
+      write('products', data.products);
+      if (data.user) {
+        const me = normUser(data.user);
+        write('me', me);
+        write('users', (data.users || [me]).map(normUser));
+      } else {
+        // Signed out, or the saved login expired.
+        remove('token'); remove('me'); remove('users');
+      }
+    } catch (e) {
+      console.warn('Store: using saved data, the server could not be reached.', e);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   // Small flags for this browser only (for example: has the intro been shown).
@@ -79,56 +171,74 @@ const Store = (() => {
 
   /* ---------- users ---------- */
 
-  const users = () => read('users', []);
-  const saveUsers = (list) => write('users', list);
+  const currentUser = () => read('me', null);
 
-  function currentUser() {
-    const id = read('session', null);
-    return id ? users().find((u) => u.id === id) || null : null;
+  // Everyone the admin can see (all accounts, for an admin), always with the
+  // signed-in account's latest copy.
+  function users() {
+    const me = currentUser();
+    const list = read('users', []).filter((u) => !me || u.id !== me.id);
+    return me ? [...list, me] : list;
   }
 
-  function signup({ name, email, phone, whatsapp, password }) {
-    email = String(email).trim().toLowerCase();
-    const list = users();
-    if (list.some((u) => u.email === email)) return { ok: false, error: 'An account with this email already exists.' };
-    const user = {
-      id: uid('u_'), name: String(name).trim(), email, phone: String(phone).trim(),
-      whatsapp: String(whatsapp || phone).trim(), password,
-      role: 'customer', mode: 'personal', balances: emptyBalances(), favs: [], createdAt: Date.now()
-    };
-    list.push(user);
-    saveUsers(list);
-    write('session', user.id);
-    return { ok: true, user };
+  // signup() and login() talk to the server, so unlike the rest of Store they
+  // return a Promise: `const res = await Store.login(...)`.
+  async function signup({ name, email, phone, whatsapp, password }) {
+    try {
+      const data = await api('POST', '/api/auth/signup', {
+        name, email, phone, whatsapp, password,
+        profile: { mode: 'personal', balances: emptyBalances(), favs: [] }
+      });
+      write('token', data.token);
+      write('me', normUser(data.user));
+      return { ok: true, user: currentUser() };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
   }
 
-  function login(email, password) {
-    email = String(email).trim().toLowerCase();
-    const user = users().find((u) => u.email === email && u.password === password);
-    if (!user) return { ok: false, error: 'Wrong email or password.' };
-    write('session', user.id);
-    return { ok: true, user };
+  async function login(email, password) {
+    try {
+      const data = await api('POST', '/api/auth/login', { email, password });
+      write('token', data.token);
+      write('me', normUser(data.user));
+      return { ok: true, user: currentUser() };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
   }
 
   function logout() {
-    try { localStorage.removeItem(PREFIX + 'session'); } catch (e) { /* ignore */ }
+    remove('token'); remove('me'); remove('users');
   }
 
+  // Updates the local copy at once and saves it to the server in the background:
+  // your own account in full (with a sequence number), anyone else's (admin only)
+  // as just the changed fields, so their own newer changes aren't overwritten.
   function updateUser(id, patch) {
-    const list = users();
+    const me = currentUser();
+    if (me && me.id === id) {
+      const next = { ...me, ...patch };
+      if (!write('me', next)) return null;
+      const { id: _id, email: _email, role: _role, createdAt: _created, ...account } = next;
+      sync('PATCH', '/api/auth/me', { ...account, _seq: nextSeq() });
+      return next;
+    }
+    const list = read('users', []);
     const user = list.find((u) => u.id === id);
     if (!user) return null;
     Object.assign(user, patch);
-    return saveUsers(list) ? user : null;
+    if (!write('users', list)) return null;
+    sync('PATCH', `/api/admin/users/${encodeURIComponent(id)}`, patch);
+    return user;
   }
 
   function adjustBalance(userId, code, delta) {
-    const list = users();
-    const user = list.find((u) => u.id === userId);
+    const user = users().find((u) => u.id === userId);
     if (!user) return false;
-    user.balances[code] = round((user.balances[code] || 0) + delta, dpOf(code));
-    saveUsers(list);
-    return true;
+    const balances = { ...emptyBalances(), ...(user.balances || {}) };
+    balances[code] = round((balances[code] || 0) + delta, dpOf(code));
+    return !!updateUser(userId, { balances });
   }
 
   /* ---------- personal / business mode ---------- */
@@ -243,10 +353,9 @@ const Store = (() => {
   // Customers of a removed agent move to whoever is least busy.
   function deleteAgent(id) {
     write('agents', agents().filter((a) => a.id !== id));
-    const list = users();
-    list.filter((u) => u.agentId === id).forEach((u) => { u.agentId = null; });
-    saveUsers(list);
-    list.filter((u) => u.agentId === null && u.mode === 'business').forEach((u) => updateUser(u.id, { agentId: pickAgent() }));
+    users().filter((u) => u.agentId === id).forEach((u) => {
+      updateUser(u.id, { agentId: u.mode === 'business' ? pickAgent() : null });
+    });
   }
 
   const messages = () => read('messages', []);
@@ -369,22 +478,27 @@ const Store = (() => {
     if (list.some((c) => c.name.toLowerCase() === name.toLowerCase() && c.id !== data.id)) {
       return { ok: false, error: 'A category with this name already exists.' };
     }
+    let saved;
     if (data.id) {
-      const c = list.find((x) => x.id === data.id);
-      if (!c) return { ok: false, error: 'Category not found.' };
-      Object.assign(c, data, { name });
+      saved = list.find((x) => x.id === data.id);
+      if (!saved) return { ok: false, error: 'Category not found.' };
+      Object.assign(saved, data, { name });
     } else {
       const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'cat';
       const id = list.some((c) => c.id === slug) ? slug + '-' + Math.random().toString(36).slice(2, 5) : slug;
-      list.push({ icon: 'box', hue: 200, img: '', ...data, name, id });
+      saved = { icon: 'box', hue: 200, img: '', ...data, name, id };
+      list.push(saved);
     }
-    return write('categories', list) ? { ok: true } : { ok: false, error: FULL };
+    if (!write('categories', list)) return { ok: false, error: FULL };
+    sync('PUT', `/api/admin/categories/${encodeURIComponent(saved.id)}`, saved);
+    return { ok: true };
   }
 
   function deleteCategory(id) {
     const count = products().filter((p) => p.cat === id).length;
     if (count) return { ok: false, error: `Move or delete the ${count} product${count === 1 ? '' : 's'} in this category first.` };
     write('categories', categories().filter((c) => c.id !== id));
+    sync('DELETE', `/api/admin/categories/${encodeURIComponent(id)}`);
     return { ok: true };
   }
 
@@ -395,19 +509,24 @@ const Store = (() => {
 
   function saveProduct(data) {
     const list = products();
+    let saved;
     if (data.id) {
       const i = list.findIndex((p) => p.id === data.id);
       if (i === -1) return { ok: false, error: 'Product not found.' };
-      list[i] = { ...list[i], ...data };
+      saved = list[i] = { ...list[i], ...data };
     } else {
-      list.unshift({ rating: 0, sold: 0, ship: '7-15', ...data, id: uid('p_') });
+      saved = { rating: 0, sold: 0, ship: '7-15', ...data, id: uid('p_') };
+      list.unshift(saved);
     }
-    return write('products', list) ? { ok: true } : { ok: false, error: FULL };
+    if (!write('products', list)) return { ok: false, error: FULL };
+    sync('PUT', `/api/admin/products/${encodeURIComponent(saved.id)}`, saved);
+    return { ok: true };
   }
 
   function deleteProduct(id) {
     write('products', products().filter((p) => p.id !== id));
     write('cart', cart().filter((c) => c.id !== id));
+    sync('DELETE', `/api/admin/products/${encodeURIComponent(id)}`);
   }
 
   // Products scored for one user: their business type, favourites and past orders,
@@ -613,8 +732,10 @@ const Store = (() => {
   }
 
   seed();
+  const ready = load();
 
   return {
+    ready, flush,
     resetDemo, flag, setFlag, users, currentUser, signup, login, logout, updateUser,
     mode, isBusiness, setMode, businessType, submitVerification, setVerification, saveBrand,
     toggleFav, isFav, reviews, addReview,

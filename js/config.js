@@ -19,6 +19,10 @@ const SEED_BULK = {
   ]
 };
 
+// The backend (backend/app.py). Accounts and the product catalogue live there;
+// each page loads them from it before rendering.
+const API_BASE = 'https://m2c.13-48-31-7.sslip.io';
+
 // Optional: the web address of your own AI service. While it is empty, the business
 // assistant answers from the product catalogue and built-in tips. When set, the assistant
 // POSTs { messages, user } to it and shows the "reply" text it returns. Keep any AI API key

@@ -174,4 +174,3 @@ const SEED_RATES = {
   TRX: { name: 'TRON', kind: 'crypto', dp: 2, buy: 420, sell: 410 }
 };
 
-const DEMO_ADMIN = { name: 'Store Admin', email: 'admin@demo.com', phone: '08000000000', password: 'admin123', role: 'admin' };
