@@ -45,9 +45,11 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-not-for-production")
-# Render Postgres hands out "postgres://..." URLs; SQLAlchemy only accepts "postgresql://".
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///easy2buy.db").replace(
-    "postgres://", "postgresql://", 1)
+# Postgres URLs ("postgres://" or "postgresql://") are routed through pg8000, a
+# pure-Python driver, so no compiled database driver is needed on the server.
+_db_url = os.environ.get("DATABASE_URL", "sqlite:///easy2buy.db")
+_db_url = re.sub(r"^postgres(ql)?://", "postgresql+pg8000://", _db_url)
+app.config["SQLALCHEMY_DATABASE_URI"] = _db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Kept in step with the values in ../js/config.js so totals match once connected.
