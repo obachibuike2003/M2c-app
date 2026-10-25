@@ -45,7 +45,32 @@ To actually use the "Generate" button in AiStudio:
 4. Run the backend (`python app.py`) and open `studio.html` through a local
    static server (not `file://`, or the fetch will be blocked).
 
-## Deploying on Render
+## Live deployment (EC2)
+
+Running at **https://m2c.13-48-31-7.sslip.io** (e.g. `/api/health`), on the
+same EC2 box and in the same style as the other apps there:
+
+| Piece | Where |
+|---|---|
+| Code | `/home/ubuntu/m2c-app` (git clone of this repo), app in `backend/` |
+| Process | `m2c.service` (systemd) → gunicorn on `127.0.0.1:3005` |
+| Web | nginx site `/etc/nginx/sites-available/m2c`, Let's Encrypt cert via certbot |
+| Database | local Postgres, database + user `m2c` |
+| Secrets | `/home/ubuntu/m2c-app/backend/.env` (not in git) |
+
+To ship new backend code after pushing to GitHub:
+
+```bash
+ssh -i fadex.pem ubuntu@13.48.31.7
+cd ~/m2c-app && git pull
+backend/venv/bin/pip install -q -r backend/requirements.txt   # only if requirements changed
+sudo systemctl restart m2c && sudo systemctl status m2c --no-pager
+```
+
+Logs: `sudo journalctl -u m2c -n 100 --no-pager`. To enable AI Generate, add
+your key to `OPENAI_API_KEY=` in that `.env`, then `sudo systemctl restart m2c`.
+
+## Deploying on Render (alternative)
 
 The static site (https://m2c-app-vqeb.onrender.com) stays exactly as it is —
 this API is already set to accept requests from it. Add the API as a second,
