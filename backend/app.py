@@ -80,6 +80,7 @@ def issue_token(user):
     return _tokens.dumps(user.id)
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_IMAGE_MODEL = os.environ.get("OPENAI_IMAGE_MODEL", "gpt-image-1-mini")
 
 
 def now():
@@ -858,20 +859,30 @@ def generate_design():
     # Steers a free-text prompt towards something that actually works placed
     # on a product: flat, centred, no mockup/background clutter.
     full_prompt = (
-        f"A simple, flat logo design, centred on a plain white background, no mockup, "
-        f"no watermark, no extra text unless requested: {prompt}"
+        f"A simple, flat logo design, centred, on a transparent background, no mockup, "
+        f"no shadows or glow, no watermark, no extra text unless requested: {prompt}"
     )
 
-    try:
-        res = requests.post(
-            "https://api.openai.com/v1/images/generations",
-            headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
-            json={"model": "dall-e-3", "prompt": full_prompt, "n": 1, "size": "1024x1024",
-                  "quality": "standard", "response_format": "b64_json"},
-            timeout=60,
-        )
-    except requests.RequestException as e:
-        return jsonify({"error": f"Could not reach OpenAI: {e}"}), 502
+    # Some accounts can't use every image model (bigger ones need a verified
+    # organisation), so fall back through the cheaper ones before giving up.
+    models = list(dict.fromkeys([OPENAI_IMAGE_MODEL, "gpt-image-1-mini", "gpt-image-1", "gpt-image-2"]))
+    for model in models:
+        try:
+            res = requests.post(
+                "https://api.openai.com/v1/images/generations",
+                headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
+                # gpt-image models always answer with base64 and reject "response_format".
+                # A see-through background, so the logo sits cleanly on the product photo.
+                json={"model": model, "prompt": full_prompt, "n": 1, "size": "1024x1024", "quality": "low",
+                      "background": "transparent", "output_format": "png"},
+                timeout=120,
+            )
+        except requests.RequestException as e:
+            return jsonify({"error": f"Could not reach OpenAI: {e}"}), 502
+        unavailable = res.status_code in (400, 403, 404) and any(
+            w in res.text for w in ("does not exist", "must be verified", "not have access"))
+        if not unavailable:
+            break
 
     if res.status_code != 200:
         message = "OpenAI rejected the request."
@@ -881,8 +892,33 @@ def generate_design():
             pass
         return jsonify({"error": message}), 502
 
-    b64 = res.json()["data"][0]["b64_json"]
-    return jsonify({"image": f"data:image/png;base64,{b64}"})
+    import base64
+    item = (res.json().get("data") or [{}])[0]
+    if item.get("b64_json"):
+        raw = base64.b64decode(item["b64_json"])
+    elif item.get("url"):  # some models hand back a short-lived link instead
+        try:
+            raw = requests.get(item["url"], timeout=30).content
+        except requests.RequestException as e:
+            return jsonify({"error": f"Could not download the design: {e}"}), 502
+    else:
+        return jsonify({"error": "OpenAI didn't send an image back."}), 502
+    return jsonify({"image": "data:image/png;base64," + base64.b64encode(_shrink_logo(raw)).decode()})
+
+
+def _shrink_logo(raw, size=512):
+    """1024px PNGs run past 1 MB, too big to keep on an account or an order;
+    512px is plenty for placing on a product."""
+    try:
+        import io
+        from PIL import Image
+        img = Image.open(io.BytesIO(raw))
+        img.thumbnail((size, size), Image.Resampling.LANCZOS)
+        out = io.BytesIO()
+        img.save(out, "PNG", optimize=True)
+        return out.getvalue()
+    except Exception:
+        return raw  # no Pillow, or an odd file: send it as it came
 
 
 # ---------------------------------------------------------------------------
@@ -893,15 +929,19 @@ def generate_design():
 # the picture). A product scores by its best-matching photo, and products in
 # the same category as the top matches get a nudge, so "similar items" stay
 # on topic. With OPENAI_API_KEY set, a vision model also names the item and
-# its category, which outweighs the picture match.
-# Measured on 61 held-out product photos: right product first 46/61, in the
-# top 3 56/61 (colour alone on the main photo managed 39 and 50).
+# its category; the picture still decides which exact item comes first.
+# Measured on 61 phone-like photos (item on a table, tilted, darker): right
+# product first 45/61 and top 3 52/61 without AI; 51/61 and 58/61 with it,
+# with 4.2 of the top 5 in the right category (2.1 without).
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).resolve().parent.parent  # product photos live in ../assets
 PHOTO_MAX_BYTES = 8 * 1024 * 1024
 _fingerprints = {}  # photo src -> fingerprint (or None if unreadable), built on first use
 CATEGORY_NUDGE = 0.15
+AI_CATEGORY_WEIGHT = float(os.environ.get("AI_CATEGORY_WEIGHT", 0.35))
+AI_KEYWORD_WEIGHT = float(os.environ.get("AI_KEYWORD_WEIGHT", 0.1))
+AI_KEYWORD_CAP = 0.3
 
 
 def _open_image(src):
@@ -1033,10 +1073,26 @@ def warm_photo_search():
     threading.Thread(target=run, daemon=True).start()
 
 
+_descriptions = {}  # photo hash -> vision answer, so a repeated search doesn't pay twice
+
+
 def _describe_photo(data_url, categories):
     """Ask a vision model what the item is. Returns {label, category, keywords} or None."""
     if not OPENAI_API_KEY:
         return None
+    import hashlib
+    key = hashlib.sha1(data_url.encode()).hexdigest()
+    if key in _descriptions:
+        return _descriptions[key]
+    answer = _ask_vision(data_url, categories)
+    if answer is not None:
+        if len(_descriptions) > 500:
+            _descriptions.clear()
+        _descriptions[key] = answer
+    return answer
+
+
+def _ask_vision(data_url, categories):
     cats = ", ".join(f"{c.id} ({c.name})" for c in categories)
     try:
         res = requests.post(
@@ -1099,10 +1155,11 @@ def search_by_photo():
     for p in products:
         score = looks[p.id] + CATEGORY_NUDGE * votes.get(p.cat_id, 0) / total_votes
         if ai:
+            # The picture decides which item; the AI decides what kind of item.
             text = f"{p.name} {p.sub or ''} {p.desc}".lower()
-            score = looks[p.id] * 0.4
-            score += 0.6 if ai.get("category") == p.cat_id else 0
-            score += min(0.6, 0.15 * sum(1 for k in keywords if k in text))
+            score = looks[p.id]
+            score += AI_CATEGORY_WEIGHT if ai.get("category") == p.cat_id else 0
+            score += min(AI_KEYWORD_CAP, AI_KEYWORD_WEIGHT * sum(1 for k in keywords if k in text))
         scored.append((score, p.sold or 0, p))
     scored.sort(key=lambda t: (t[0], t[1]), reverse=True)
 
