@@ -105,39 +105,38 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: SectionHead(
                   kicker: 'Browse',
                   title: 'Shop by category',
-                  action: 'All',
+                  action: 'All categories',
                   onAction: () => widget.goToTab(1),
                 ),
               ),
             ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 108,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: s.categories.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 6),
-                  itemBuilder: (context, i) {
+            // Every category in a grid, like the website: 4 across on phones, more on wider screens.
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverLayoutBuilder(builder: (context, box) {
+                final cols = box.crossAxisExtent > 700 ? 6 : box.crossAxisExtent > 500 ? 5 : 4;
+                final cell = (box.crossAxisExtent - 10 * (cols - 1)) / cols;
+                return SliverGrid(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: cols, crossAxisSpacing: 10, mainAxisSpacing: 14, mainAxisExtent: cell + 44,
+                  ),
+                  delegate: SliverChildBuilderDelegate(childCount: s.categories.length, (context, i) {
                     final c = s.categories[i];
                     return FadeIn(
-                      delay: Duration(milliseconds: 40 * (i % 8)),
+                      delay: Duration(milliseconds: 30 * (i % 8)),
                       child: Pressable(
                         onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ProductListScreen(categoryId: c.id))),
-                        child: SizedBox(
-                          width: 78,
-                          child: Column(children: [
-                            CategoryBubble(category: c, size: 64),
-                            const SizedBox(height: 8),
-                            Text(c.name, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, height: 1.2)),
-                          ]),
-                        ),
+                        child: Column(children: [
+                          CategoryBubble(category: c, size: cell),
+                          const SizedBox(height: 7),
+                          Text(c.name, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, height: 1.2, color: Brand.ink)),
+                        ]),
                       ),
                     );
-                  },
-                ),
-              ),
+                  }),
+                );
+              }),
             ),
             if (!s.isBusiness) SliverToBoxAdapter(child: _FlashDeals(products: s.products)),
             SliverToBoxAdapter(
