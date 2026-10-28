@@ -110,6 +110,8 @@ class AccountScreen extends StatelessWidget {
           icon: const Icon(Icons.logout),
           label: const Text('Sign out'),
         ),
+        const SizedBox(height: 14),
+        Text('${AppConfig.appName} · build ${AppConfig.build}', textAlign: TextAlign.center, style: const TextStyle(color: Brand.muted, fontSize: 12)),
       ]),
     );
   }

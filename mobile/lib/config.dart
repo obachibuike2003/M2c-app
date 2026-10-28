@@ -12,6 +12,10 @@ class AppConfig {
   static const siteBase = String.fromEnvironment('SITE_BASE', defaultValue: 'https://m2c-app-vqeb.onrender.com');
 
   static const appName = 'Easy2buy';
+
+  /// When this build was made, shown on the Account screen so you can tell
+  /// which version a phone is running. Set by the deploy script.
+  static const build = String.fromEnvironment('BUILD', defaultValue: 'dev');
   static const tagline = 'Shop China. Pay in Naira.';
   static const supportEmail = 'support@example.com';
   static const supportWhatsapp = '+234 800 000 0000';
