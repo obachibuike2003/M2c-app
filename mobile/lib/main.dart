@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app_state.dart';
 import 'config.dart';
 import 'screens/account.dart';
+import 'screens/business.dart';
 import 'screens/cart.dart';
 import 'screens/exchange.dart';
 import 'screens/home.dart';
@@ -111,7 +112,8 @@ class _ShellState extends State<Shell> {
   Widget _root(int i) => switch (i) {
         0 => HomeScreen(goToTab: _go),
         1 => const CategoriesScreen(),
-        2 => const ExchangeScreen(),
+        // Business buyers get their hub here instead, like the website's bottom bar.
+        2 => const _ExchangeOrBusiness(),
         3 => const CartScreen(asTab: true),
         _ => const AccountScreen(),
       };
@@ -144,7 +146,8 @@ class _ShellState extends State<Shell> {
 }
 
 /// Same five tabs and look as the website's bottom bar: outline icons, the
-/// open tab in red, "Sign in" in place of "Account" until you log in.
+/// open tab in red, Business in place of Exchange for business buyers, and
+/// "Sign in" in place of "Account" until you log in.
 class _TabBar extends StatelessWidget {
   final int index;
   final ValueChanged<int> onTap;
@@ -154,10 +157,11 @@ class _TabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final count = context.select<AppState, int>((s) => s.cartCount);
     final signedIn = context.select<AppState, bool>((s) => s.user != null);
+    final business = context.select<AppState, bool>((s) => s.isBusiness);
     final tabs = [
       (Icons.home_outlined, 'Home'),
       (Icons.grid_view_outlined, 'Shop'),
-      (Icons.swap_horiz_rounded, 'Exchange'),
+      business ? (Icons.work_outline_rounded, 'Business') : (Icons.swap_horiz_rounded, 'Exchange'),
       (Icons.shopping_cart_outlined, 'Cart'),
       (Icons.person_outline_rounded, signedIn ? 'Account' : 'Sign in'),
     ];
@@ -200,5 +204,16 @@ class _TabBar extends StatelessWidget {
         ]),
       ),
     );
+  }
+}
+
+/// Tab 2: the Business hub for business buyers, Exchange for everyone else.
+class _ExchangeOrBusiness extends StatelessWidget {
+  const _ExchangeOrBusiness();
+
+  @override
+  Widget build(BuildContext context) {
+    final business = context.select<AppState, bool>((s) => s.isBusiness);
+    return business ? BusinessScreen(goToTab: context.findAncestorStateOfType<_ShellState>()!._go) : const ExchangeScreen();
   }
 }

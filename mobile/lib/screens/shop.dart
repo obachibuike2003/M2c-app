@@ -156,7 +156,15 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   fillColor: const Color(0xFFF0F1F4),
                   isDense: true,
                   prefixIcon: const Icon(Icons.search, size: 20),
-                  suffixIcon: const Padding(padding: EdgeInsets.all(4), child: CameraSearchButton()),
+                  suffixIcon: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const CameraSearchButton(),
+                      const SizedBox(width: 6),
+                      // Typing already filters live; this just closes the keyboard to show results.
+                      SearchGoButton(onTap: () => FocusScope.of(context).unfocus()),
+                    ]),
+                  ),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(99), borderSide: BorderSide.none),
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(99), borderSide: BorderSide.none),
                   focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(99), borderSide: const BorderSide(color: Brand.red, width: 1.5)),

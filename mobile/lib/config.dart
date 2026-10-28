@@ -38,6 +38,12 @@ class AppConfig {
     'Arrived in Nigeria', 'At our Lagos warehouse', 'Out for delivery', 'Delivered',
   ];
 
+  /// Business buyers' agents, the website's SEED_AGENTS (js/data.js).
+  static const agents = [
+    (id: 'a1', name: 'Amaka', whatsapp: '2348000000001'),
+    (id: 'a2', name: 'Tunde', whatsapp: '2348000000002'),
+  ];
+
   static const businessTypes = [
     (id: 'fashion', name: 'Fashion & clothing store'),
     (id: 'phones', name: 'Phone & gadget shop'),

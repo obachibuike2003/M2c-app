@@ -72,6 +72,29 @@ class CameraSearchButton extends StatelessWidget {
       );
 }
 
+/// Red round search button that sits after the camera, like the website's.
+class SearchGoButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const SearchGoButton({super.key, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: 'Search',
+        excludeSemantics: true,
+        child: Pressable(
+          onTap: onTap,
+          scale: 0.9,
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: const BoxDecoration(color: Brand.red, shape: BoxShape.circle),
+            child: const Icon(Icons.search_rounded, color: Colors.white, size: 21),
+          ),
+        ),
+      );
+}
+
 class _SourceTile extends StatelessWidget {
   final IconData icon;
   final String label;

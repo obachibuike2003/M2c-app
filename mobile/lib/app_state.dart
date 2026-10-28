@@ -146,8 +146,20 @@ class AppState extends ChangeNotifier {
     return updateAccount({'favs': favs.toList()});
   }
 
-  Future<void> setBusiness(String name, String type) =>
-      updateAccount({'mode': 'business', 'business': {'name': name.trim(), 'type': type}});
+  /// Switches to business buying. Like the website, a business buyer gets an
+  /// agent; the app can't see other customers to find the least busy one, so
+  /// it spreads people evenly by account id instead.
+  Future<void> setBusiness(String name, String type) {
+    final agents = AppConfig.agents;
+    final current = user?.raw['agentId'] as String?;
+    final keep = agents.any((a) => a.id == current);
+    final spread = (user?.id ?? '').codeUnits.fold<int>(0, (a, b) => a + b) % agents.length;
+    return updateAccount({
+      'mode': 'business',
+      'business': {'name': name.trim(), 'type': type},
+      'agentId': keep ? current : agents[spread].id,
+    });
+  }
 
   Future<void> setPersonal() => updateAccount({'mode': 'personal'});
 

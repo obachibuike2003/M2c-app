@@ -74,6 +74,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(width: 10),
                       const Expanded(child: Text('Search phones, cars, raw materials', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Brand.muted))),
                       const CameraSearchButton(),
+                      const SizedBox(width: 6),
+                      SearchGoButton(onTap: () => openSearch(context)),
                     ]),
                   ),
                 ),

@@ -194,7 +194,12 @@ class _ModeOption extends StatelessWidget {
   const _ModeOption({required this.icon, required this.title, required this.text, required this.selected, required this.onTap});
 
   @override
-  Widget build(BuildContext context) => Pressable(
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        selected: selected,
+        label: 'Buy as $title. $text',
+        excludeSemantics: true,
+        child: Pressable(
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -213,6 +218,7 @@ class _ModeOption extends StatelessWidget {
             Text(text, style: const TextStyle(color: Brand.muted, fontSize: 12.5)),
           ]),
         ),
+      ),
       );
 }
 
