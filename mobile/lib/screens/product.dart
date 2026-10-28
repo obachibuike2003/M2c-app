@@ -44,6 +44,15 @@ class _ProductScreenState extends State<ProductScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // Feeds "Recommended for you": what they open says what they like.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AppState>().noteView(widget.productId);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final s = context.watch<AppState>();
     final p = s.product(widget.productId);

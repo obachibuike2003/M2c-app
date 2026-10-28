@@ -142,10 +142,30 @@ class _HomeScreenState extends State<HomeScreen> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
-                child: SectionHead(
-                  kicker: 'For you',
-                  title: s.isBusiness ? 'Picked for your business' : 'Recommended for you',
-                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  SectionHead(
+                    kicker: 'For you',
+                    title: s.isBusiness ? 'Picked for your business' : 'Recommended for you',
+                  ),
+                  if (s.searches.isNotEmpty || s.views.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Row(children: [
+                        const Icon(Icons.auto_awesome, size: 15, color: Brand.red600),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            s.searches.isNotEmpty
+                                ? 'Based on your searches: ${s.searches.take(3).join(', ')}'
+                                : 'Based on what you\'ve been looking at',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Brand.muted, fontSize: 12.5, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ]),
+                    ),
+                ]),
               ),
             ),
             SliverToBoxAdapter(

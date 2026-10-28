@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show ChangeNotifier, Uint8List;
@@ -43,6 +44,8 @@ class AppState extends ChangeNotifier {
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
     api.token = _prefs.getString('token');
+    searches = _prefs.getStringList('searches') ?? [];
+    views = _prefs.getStringList('views') ?? [];
     final saved = _prefs.getString('cart');
     if (saved != null) {
       cart = (jsonDecode(saved) as List).map((e) => CartLine.fromJson(e as Map<String, dynamic>)).toList();
@@ -73,11 +76,40 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  /// The backend's recommendation algorithm (business type, favourites and
-  /// past orders weigh in; best-sellers break ties).
+  /// What this person searched for and opened, newest first. Kept on the
+  /// device (guests too) and sent along so "Recommended for you" follows it.
+  List<String> searches = [];
+  List<String> views = [];
+  Timer? _rethink;
+
+  void noteSearch(String query) {
+    final q = query.trim().toLowerCase();
+    if (q.length < 2) return;
+    searches = [q, ...searches.where((s) => s != q && !q.startsWith(s) && !s.startsWith(q))].take(20).toList();
+    _prefs.setStringList('searches', searches);
+    _soon();
+  }
+
+  void noteView(String productId) {
+    views = [productId, ...views.where((v) => v != productId)].take(30).toList();
+    _prefs.setStringList('views', views);
+    _soon();
+  }
+
+  /// Re-ranks a moment after the last change, so a burst of typing is one request.
+  void _soon() {
+    _rethink?.cancel();
+    _rethink = Timer(const Duration(milliseconds: 1500), () async {
+      await _loadRecommended();
+      notifyListeners();
+    });
+  }
+
+  /// The backend's recommendation algorithm: business type, favourites, past
+  /// orders, and what they searched and opened weigh in; best-sellers break ties.
   Future<void> _loadRecommended() async {
     try {
-      final list = await api.get('/api/recommendations?limit=12') as List;
+      final list = await api.request('POST', '/api/recommendations?limit=24', body: {'searches': searches, 'views': views}) as List;
       recommended = list.map((e) => Product.fromJson(e as Map<String, dynamic>)).toList();
     } catch (_) {
       recommended = [...products]..sort((a, b) => b.sold.compareTo(a.sold));

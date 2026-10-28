@@ -141,7 +141,11 @@ class _PhotoResultsScreenState extends State<PhotoResultsScreen> {
   @override
   void initState() {
     super.initState();
-    _search = context.read<AppState>().searchByPhoto(widget.bytes, widget.mime);
+    final s = context.read<AppState>();
+    _search = s.searchByPhoto(widget.bytes, widget.mime).then((r) {
+      if (r.label != null) s.noteSearch(r.label!);
+      return r;
+    });
   }
 
   @override

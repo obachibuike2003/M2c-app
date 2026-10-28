@@ -424,7 +424,8 @@ class ProductGrid extends StatelessWidget {
           crossAxisCount: cols, mainAxisSpacing: 12, crossAxisSpacing: 12, mainAxisExtent: (c.maxWidth - 12 * (cols - 1)) / cols + 96,
         ),
         itemCount: products.length,
-        itemBuilder: (_, i) => ProductCard(product: products[i], index: i),
+        // Keyed by product, so when the list re-orders each card keeps its own photo.
+        itemBuilder: (_, i) => ProductCard(key: ValueKey(products[i].id), product: products[i], index: i),
       );
     });
   }

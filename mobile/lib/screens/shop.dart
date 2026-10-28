@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -116,8 +118,18 @@ class _ProductListScreenState extends State<ProductListScreen> {
   late String _condition = widget.condition;
   _Sort _sort = _Sort.popular;
 
+  Timer? _pause;
+
+  /// A search counts once they stop typing for a moment, or press search.
+  void _typed(String v) {
+    setState(() => _query = v);
+    _pause?.cancel();
+    _pause = Timer(const Duration(milliseconds: 1200), () => context.read<AppState>().noteSearch(v));
+  }
+
   @override
   void dispose() {
+    _pause?.cancel();
     _search.dispose();
     super.dispose();
   }
@@ -152,7 +164,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 controller: _search,
                 autofocus: true,
                 textInputAction: TextInputAction.search,
-                onChanged: (v) => setState(() => _query = v),
+                onChanged: _typed,
+                onSubmitted: (v) => context.read<AppState>().noteSearch(v),
                 decoration: InputDecoration(
                   hintText: cat == null ? 'Search phones, cars, raw materials' : 'Search in ${cat.name}',
                   filled: true,
@@ -165,7 +178,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       const CameraSearchButton(),
                       const SizedBox(width: 6),
                       // Typing already filters live; this just closes the keyboard to show results.
-                      SearchGoButton(onTap: () => FocusScope.of(context).unfocus()),
+                      SearchGoButton(onTap: () {
+                        FocusScope.of(context).unfocus();
+                        context.read<AppState>().noteSearch(_search.text);
+                      }),
                     ]),
                   ),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(99), borderSide: BorderSide.none),

@@ -454,10 +454,31 @@ def discount_of(product):
 # change when the internals do.
 # ---------------------------------------------------------------------------
 
-def recommend_products(user, products, orders_by_product_ids=None, limit=15):
-    in_stock = [p for p in products if p.stock > 0]
+_STOP_WORDS = set(
+    "a an the and or for of to in on with my me i you your is are be can do how what where which who want need "
+    "find show get buy sell some any please pls abeg new cheap best good price cost much many pieces piece pcs".split())
 
-    if user is None:
+
+def _words(text):
+    """Lowercase search words, with plural "s"/"es" dropped so "phones" finds "phone"."""
+    out = []
+    for w in re.findall(r"[a-z0-9]+", str(text or "").lower()):
+        if len(w) < 2 or w in _STOP_WORDS:
+            continue
+        out.append(re.sub(r"(es|s)$", "", w) if len(w) > 3 else w)
+    return out
+
+
+def recommend_products(user, products, orders_by_product_ids=None, limit=15, searches=None, views=None):
+    """Ranks products for this person. Category interest comes from their
+    business type, favourites and past orders; product interest from what
+    they've searched for and looked at recently (newest counts most); best
+    sellers break ties, and the list is spread across categories."""
+    in_stock = [p for p in products if p.stock > 0]
+    searches = [str(q) for q in (searches or []) if str(q).strip()][:20]
+    views = [str(v) for v in (views or [])][:30]
+
+    if user is None and not searches and not views:
         return sorted(in_stock, key=lambda p: -(p.sold or 0))[:limit]
 
     weight = {}
@@ -466,23 +487,68 @@ def recommend_products(user, products, orders_by_product_ids=None, limit=15):
         if cat_id:
             weight[cat_id] = weight.get(cat_id, 0) + w
 
-    if user.mode == "business" and user.business_type:
-        for i, cat_id in enumerate(user.business_type.cats or []):
-            add(cat_id, 6 - i * 1.5)
-
     by_id = {p.id: p for p in products}
-    for fav_id in (user.favs or []):
-        p = by_id.get(fav_id)
-        if p:
-            add(p.cat_id, 2)
+    if user is not None:
+        if user.mode == "business" and user.business_type:
+            for i, cat_id in enumerate(user.business_type.cats or []):
+                add(cat_id, 6 - i * 1.5)
 
-    for prod_id in (orders_by_product_ids or []):
-        p = by_id.get(prod_id)
-        if p:
-            add(p.cat_id, 1)
+        for fav_id in (user.favs or []):
+            p = by_id.get(fav_id)
+            if p:
+                add(p.cat_id, 2)
+
+        for prod_id in (orders_by_product_ids or []):
+            p = by_id.get(prod_id)
+            if p:
+                add(p.cat_id, 1)
+
+    # What they've looked at: its category, its kind (sub) and the words in its name.
+    sub_weight, word_weight = {}, {}
+    for i, pid in enumerate(views):
+        p = by_id.get(pid)
+        if not p:
+            continue
+        fresh = 0.85 ** i  # the most recent counts most
+        add(p.cat_id, 1.5 * fresh)
+        if p.sub:
+            sub_weight[p.sub] = sub_weight.get(p.sub, 0) + 2 * fresh
+        for w in set(_words(p.name)):
+            word_weight[w] = word_weight.get(w, 0) + 0.8 * fresh
+
+    # What they've searched for: each word, by where it appears in a product.
+    cat_names = {c.id: c.name for c in Category.query.all()}
+    search_terms = {}
+    for i, q in enumerate(searches):
+        fresh = 0.85 ** i
+        for w in _words(q):
+            search_terms[w] = max(search_terms.get(w, 0), fresh)
+
+    # A search also shows interest in the categories its matches live in,
+    # so "realme" brings other phones after the Realme ones.
+    interest_cats = {by_id[v].cat_id for v in views if v in by_id}
+    for term, fresh in search_terms.items():
+        for cat_id in {p.cat_id for p in products if term in _words(p.name) or term in _words(p.sub or "")}:
+            add(cat_id, 3 * fresh)
+            interest_cats.add(cat_id)
+
+    seen_recently = set(views[:3])
+
+    def affinity(p):
+        name, sub = _words(p.name), _words(p.sub or "")
+        cat, desc = _words(cat_names.get(p.cat_id, "")), set(_words(p.desc))
+        a = sub_weight.get(p.sub, 0) if p.sub else 0
+        a += sum(word_weight.get(w, 0) for w in set(name))
+        for term, fresh in search_terms.items():
+            hit = (5 if term in name else 0) + (3 if term in sub else 0) + (1.5 if term in cat else 0) + (0.5 if term in desc else 0)
+            a += hit * fresh
+        # Something they opened a moment ago: show what's like it, not the same thing again.
+        if p.id in seen_recently:
+            a -= 6
+        return a
 
     def score(p):
-        return weight.get(p.cat_id, 0) + math.log10((p.sold or 0) + 10) / 2
+        return weight.get(p.cat_id, 0) + affinity(p) + math.log10((p.sold or 0) + 10) / 2
 
     # Pick one at a time, making each extra item from the same category count
     # a little less, so the list mixes categories instead of filling up with
@@ -490,11 +556,14 @@ def recommend_products(user, products, orders_by_product_ids=None, limit=15):
     picked = []
     used = {}
     pool = list(in_stock)
+    hot = {p.id for p in in_stock if affinity(p) > 2}  # strong match to a search or a view
+    # Spread the list across categories, but less so for what they're clearly after.
+    spread = lambda p: used.get(p.cat_id, 0) * (0.7 if p.id in hot else 0.9 if p.cat_id in interest_cats else 1.6)
     while len(picked) < limit and pool:
         best_i = 0
-        best_val = score(pool[0]) - used.get(pool[0].cat_id, 0) * 1.6
+        best_val = score(pool[0]) - spread(pool[0])
         for i, p in enumerate(pool):
-            val = score(p) - used.get(p.cat_id, 0) * 1.6
+            val = score(p) - spread(p)
             if val > best_val:
                 best_i, best_val = i, val
         chosen = pool.pop(best_i)
@@ -927,9 +996,15 @@ def apply_referral():
 
 # --- recommendations -----------------------------------------------------
 
-@app.get("/api/recommendations")
+@app.route("/api/recommendations", methods=["GET", "POST"])
 def get_recommendations():
+    """GET for the basics; POST {"searches": [...], "views": [product ids]}
+    (newest first) to also learn from what the person searched and opened.
+    Those come from the device, so guests get personal picks too."""
     limit = request.args.get("limit", default=15, type=int)
+    body = request.get_json(silent=True) or {} if request.method == "POST" else {}
+    searches = [str(q)[:80] for q in (body.get("searches") or []) if isinstance(q, (str, int))][:20]
+    views = [str(v)[:40] for v in (body.get("views") or []) if isinstance(v, (str, int))][:30]
     products = Product.query.all()
 
     user = current_user if current_user.is_authenticated else None
@@ -939,7 +1014,7 @@ def get_recommendations():
             row.product_id for row in OrderItem.query.join(OrderItem.order).filter_by(user_id=user.id).all()
         ]
 
-    picked = recommend_products(user, products, ordered_product_ids, limit=limit)
+    picked = recommend_products(user, products, ordered_product_ids, limit=limit, searches=searches, views=views)
     return jsonify([p.to_dict() for p in picked])
 
 
