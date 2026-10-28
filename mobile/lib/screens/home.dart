@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../app_state.dart';
+import '../brand_refresh.dart';
 import '../config.dart';
 import '../models.dart';
 import '../theme.dart';
@@ -33,10 +34,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final filtered = list.where((p) => _cat.isEmpty || p.cat == _cat).toList();
 
     return Scaffold(
-      body: RefreshIndicator(
-        color: Brand.red,
-        onRefresh: s.refresh,
-        child: CustomScrollView(slivers: [
+      body: BrandRefresh(
+        onRefresh: () async {
+          await s.refresh();
+          if (context.mounted && s.loadError != null && s.products.isNotEmpty) showMessage(context, s.loadError!, error: true);
+        },
+        // Under the pinned logo row (64) and search bar (60).
+        top: MediaQuery.paddingOf(context).top + 124,
+        builder: (context, hold) => CustomScrollView(physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()), slivers: [
           SliverAppBar(
             pinned: true,
             backgroundColor: Brand.bg,
@@ -75,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+          SliverToBoxAdapter(child: SizedBox(height: hold)), // keeps the red refresh header open while loading
           if (s.loading)
             const SliverFillRemaining(child: Center(child: CircularProgressIndicator(color: Brand.red)))
           else if (s.loadError != null && s.products.isEmpty)

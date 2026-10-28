@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -28,6 +29,10 @@ class Easy2buyApp extends StatelessWidget {
         title: AppConfig.appName,
         debugShowCheckedModeBanner: false,
         theme: buildTheme(),
+        // Lets the browser preview be dragged with a mouse or trackpad like a phone (pull to refresh, carousels).
+        scrollBehavior: const MaterialScrollBehavior().copyWith(
+          dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad, PointerDeviceKind.stylus},
+        ),
         home: const _Launch(),
       );
 }
