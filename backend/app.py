@@ -757,6 +757,7 @@ def place_order():
 
     business = current_user.mode == "business"
     wanted = {}
+    custom = {}  # product id -> AiStudio design (logo, colour, notes) for that line
     for line in items:
         pid = line.get("productId")
         try:
@@ -766,6 +767,16 @@ def place_order():
         if not pid or qty < 1:
             return jsonify({"error": "One of the items in your order is invalid."}), 400
         wanted[pid] = wanted.get(pid, 0) + qty
+        if isinstance(line.get("custom"), dict) and pid not in custom:
+            c = line["custom"]
+            design = {
+                "logo": str(c.get("logo") or "")[:600_000],  # a data: URL of the logo, kept small by the app
+                "preview": str(c.get("preview") or "")[:400_000],
+                "tint": str(c.get("tint") or "")[:20],
+                "notes": str(c.get("notes") or "")[:400],
+            }
+            if any(design.values()):
+                custom[pid] = design
 
     order_items = []
     subtotal = 0
@@ -782,7 +793,7 @@ def place_order():
         # floor(x + 0.5) rounds halves up like the site's Math.round and Dart's
         # round(); Python's round() would send 28.5 to 28 and disagree by ₦1.
         unit = math.floor(product.price * (1 - off / 100) + 0.5)
-        order_items.append(OrderItem(product_id=product.id, name=product.name, price=unit, qty=qty))
+        order_items.append(OrderItem(product_id=product.id, name=product.name, price=unit, qty=qty, custom=custom.get(pid)))
         subtotal += unit * qty
         product.stock -= qty
         product.sold = (product.sold or 0) + qty

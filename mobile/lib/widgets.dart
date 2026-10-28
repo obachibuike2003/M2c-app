@@ -440,6 +440,93 @@ class SectionHead extends StatelessWidget {
       );
 }
 
+/// The website's dark "page-hero" banner: a photo under a dark wash, a yellow
+/// kicker, a big white title and a line of text.
+class PageHero extends StatelessWidget {
+  final String kicker, title, text, photo;
+  const PageHero({super.key, required this.kicker, required this.title, required this.text, required this.photo});
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(children: [
+          Positioned.fill(child: NetImage(photo, fit: BoxFit.cover, placeholder: const ColoredBox(color: Brand.ink))),
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [Color(0xF5111216), Color(0xD9111216), Color(0x66501018)],
+                  stops: [0, 0.55, 1],
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(kicker.toUpperCase(), style: const TextStyle(color: Color(0xFFFFC23D), fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 1.3)),
+              const SizedBox(height: 8),
+              Text(title, style: Brand.head(30, weight: FontWeight.w800, color: Colors.white).copyWith(height: 1.08, letterSpacing: -0.6)),
+              const SizedBox(height: 10),
+              Text(text, style: TextStyle(color: Colors.white.withValues(alpha: 0.82), fontSize: 15, height: 1.45)),
+            ]),
+          ),
+        ]),
+      );
+}
+
+/// The website's tool card: red outline icon, bold title, a short muted line.
+class ToolCard extends StatelessWidget {
+  final IconData icon;
+  final String title, text;
+  final VoidCallback onTap;
+  const ToolCard({super.key, required this.icon, required this.title, required this.text, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: title,
+        child: Pressable(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(Brand.radius), boxShadow: Brand.shadow),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(icon, color: Brand.red600, size: 28),
+              const SizedBox(height: 10),
+              Text(title, style: Brand.head(17).copyWith(height: 1.2)),
+              const SizedBox(height: 6),
+              Text(text, style: const TextStyle(color: Brand.muted, fontSize: 13.5, height: 1.4)),
+            ]),
+          ),
+        ),
+      );
+}
+
+/// Two-column grid whose rows grow to fit their tallest card.
+class TwoColumn extends StatelessWidget {
+  final List<Widget> children;
+  final double gap;
+  const TwoColumn({super.key, required this.children, this.gap = 10});
+
+  @override
+  Widget build(BuildContext context) => Column(children: [
+        for (var i = 0; i < children.length; i += 2)
+          Padding(
+            padding: EdgeInsets.only(bottom: i + 2 < children.length ? gap : 0),
+            child: IntrinsicHeight(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Expanded(child: children[i]),
+                SizedBox(width: gap),
+                Expanded(child: i + 1 < children.length ? children[i + 1] : const SizedBox()),
+              ]),
+            ),
+          ),
+      ]);
+}
+
 /// White rounded card, the site's .card.
 class CardBox extends StatelessWidget {
   final Widget child;

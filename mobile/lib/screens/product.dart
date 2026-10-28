@@ -6,7 +6,9 @@ import '../config.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../media.dart';
 import 'cart.dart';
+import 'studio.dart';
 
 class ProductScreen extends StatefulWidget {
   final String productId;
@@ -142,6 +144,16 @@ class _ProductScreenState extends State<ProductScreen> {
                   ],
                 ]),
               ),
+              if (s.isBusiness && isCustomizable(p)) ...[
+                const SizedBox(height: 12),
+                // AiStudio: business buyers can have their own logo put on the goods.
+                FilledButton.tonalIcon(
+                  style: FilledButton.styleFrom(backgroundColor: Brand.blueSoft, foregroundColor: Brand.blue, minimumSize: const Size.fromHeight(50)),
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => StudioScreen(productId: p.id))),
+                  icon: const Icon(Icons.brush_outlined, size: 19),
+                  label: const Text('Customise with your logo'),
+                ),
+              ],
               const SizedBox(height: 14),
               CardBox(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

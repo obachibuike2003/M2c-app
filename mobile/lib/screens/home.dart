@@ -9,6 +9,7 @@ import '../config.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'account.dart';
 import 'photo_search.dart';
 import 'shop.dart';
 
@@ -49,16 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
             toolbarHeight: 64,
             titleSpacing: 16,
             title: const Logo(),
-            actions: [
-              IconButton(
-                tooltip: 'Account',
-                onPressed: () => widget.goToTab(4),
-                icon: u == null
-                    ? const Icon(Icons.person_outline)
-                    : CircleAvatar(radius: 15, backgroundColor: Brand.red, child: Text(u.firstName.isEmpty ? '?' : u.firstName[0].toUpperCase(), style: Brand.head(14, color: Colors.white))),
-              ),
-              const SizedBox(width: 8),
-            ],
+            actions: [ModeSwitch(goToTab: widget.goToTab), const SizedBox(width: 14)],
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(60),
               child: Padding(
@@ -206,6 +198,61 @@ class _HomeScreenState extends State<HomeScreen> {
     final seen = {for (final p in s.recommended) p.id};
     final rest = s.products.where((p) => !seen.contains(p.id)).toList()..sort((a, b) => b.sold.compareTo(a.sold));
     return [...s.recommended, ...rest];
+  }
+}
+
+// ---------------------------------------------------------------- mode switch
+
+/// "Personal | Business" in the header, like the website's. Business needs an
+/// account and a business name, so it asks for those the first time.
+class ModeSwitch extends StatelessWidget {
+  final ValueChanged<int> goToTab;
+  const ModeSwitch({super.key, required this.goToTab});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<AppState>();
+    final business = s.isBusiness;
+
+    Future<void> choose(bool toBusiness) async {
+      if (toBusiness == business) return;
+      if (s.user == null) {
+        showMessage(context, 'Sign in first, then switch to business');
+        goToTab(4);
+        return;
+      }
+      final biz = s.user!.business;
+      if (toBusiness && (biz?['name'] == null || biz?['type'] == null)) return showBusinessSheet(context);
+      try {
+        await (toBusiness ? s.setBusiness('${biz!['name']}', '${biz['type']}') : s.setPersonal());
+        if (context.mounted) showMessage(context, toBusiness ? 'You are now buying as a business' : 'You are buying for yourself');
+      } catch (e) {
+        if (context.mounted) showMessage(context, e.toString(), error: true);
+      }
+    }
+
+    Widget option(String label, bool on, bool isBusiness) => Semantics(
+          button: true,
+          selected: on,
+          label: 'Buying as $label',
+          excludeSemantics: true,
+          child: GestureDetector(
+            onTap: () => choose(isBusiness),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              curve: easeOutStrong,
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+              decoration: BoxDecoration(color: on ? Brand.blue : Colors.transparent, borderRadius: BorderRadius.circular(99)),
+              child: Text(label, style: TextStyle(color: on ? Colors.white : Brand.muted, fontWeight: FontWeight.w700, fontSize: 13.5)),
+            ),
+          ),
+        );
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(color: const Color(0xFFE9EAEF), borderRadius: BorderRadius.circular(99)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [option('Personal', !business, false), option('Business', business, true)]),
+    );
   }
 }
 

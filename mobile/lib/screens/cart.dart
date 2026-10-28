@@ -45,7 +45,11 @@ class CartScreen extends StatelessWidget {
                             height: 82,
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(color: const Color(0xFFF2F3F6), borderRadius: BorderRadius.circular(12)),
-                            child: NetImage(l.product.img, placeholder: CategoryBubble(category: s.category(l.product.cat), size: 56, showPhoto: false)),
+                            // A customised line shows the design instead of the plain photo.
+                            child: NetImage(
+                              (l.custom?['preview'] as String?)?.isNotEmpty == true ? l.custom!['preview'] as String : l.product.img,
+                              placeholder: CategoryBubble(category: s.category(l.product.cat), size: 56, showPhoto: false),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -54,6 +58,22 @@ class CartScreen extends StatelessWidget {
                             Text(l.product.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
                             const SizedBox(height: 4),
                             Text('${money(l.unit)}${s.isBusiness ? ' each' : ''}', style: Brand.head(16, color: Brand.red600)),
+                            if (l.custom != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Row(children: [
+                                  const Icon(Icons.brush_outlined, size: 14, color: Brand.blue),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      (l.custom!['notes'] as String?)?.isNotEmpty == true ? 'Your logo · ${l.custom!['notes']}' : 'Customised with your logo',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(color: Brand.blue, fontSize: 12, fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ]),
+                              ),
                             if (l.short)
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),

@@ -293,7 +293,6 @@ class _CoinDot extends StatelessWidget {
         height: 42,
         alignment: Alignment.center,
         decoration: BoxDecoration(color: selected ? Brand.red : Brand.redSoft, shape: BoxShape.circle),
-        child: Text(code.length > 3 ? code.substring(0, 3) : code,
-            style: TextStyle(color: selected ? Colors.white : Brand.red600, fontWeight: FontWeight.w800, fontSize: 11.5)),
+        child: Text(code, style: TextStyle(color: selected ? Colors.white : Brand.red600, fontWeight: FontWeight.w800, fontSize: code.length > 3 ? 9.5 : 11.5)),
       );
 }

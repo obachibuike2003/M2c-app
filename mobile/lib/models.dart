@@ -75,15 +75,23 @@ class User {
   Map<String, dynamic>? get business => raw['business'] as Map<String, dynamic>?;
   List<String> get favs => ((raw['favs'] ?? []) as List).cast<String>();
   Map<String, dynamic>? get address => raw['address'] as Map<String, dynamic>?;
+  Map<String, dynamic> get brand => ((raw['brand'] as Map?) ?? const {}).cast<String, dynamic>();
+
+  /// Identity check: none, pending, verified or rejected.
+  String get verifyStatus => ((raw['verify'] as Map?)?['status'] ?? 'none') as String;
 }
 
 class CartLine {
   final String productId;
   int qty;
-  CartLine(this.productId, this.qty);
 
-  Map<String, dynamic> toJson() => {'id': productId, 'qty': qty};
-  factory CartLine.fromJson(Map<String, dynamic> j) => CartLine(j['id'] as String, (j['qty'] as num).toInt());
+  /// An AiStudio design for this line (logo, preview, tint, notes), or null.
+  Map<String, dynamic>? custom;
+  CartLine(this.productId, this.qty, {this.custom});
+
+  Map<String, dynamic> toJson() => {'id': productId, 'qty': qty, if (custom != null) 'custom': custom};
+  factory CartLine.fromJson(Map<String, dynamic> j) =>
+      CartLine(j['id'] as String, (j['qty'] as num).toInt(), custom: (j['custom'] as Map?)?.cast<String, dynamic>());
 }
 
 class Order {

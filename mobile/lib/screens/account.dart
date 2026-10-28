@@ -5,8 +5,13 @@ import '../app_state.dart';
 import '../config.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'assistant.dart';
 import 'auth.dart';
+import 'brand.dart';
+import 'exchange.dart';
 import 'orders.dart';
+import 'support.dart';
+import 'wallet.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
@@ -56,7 +61,7 @@ class AccountScreen extends StatelessWidget {
               title: 'Business',
               text: 'Wholesale from ${AppConfig.bulkMinQty} pieces.',
               selected: s.isBusiness,
-              onTap: () => _businessSheet(context),
+              onTap: () => showBusinessSheet(context),
             ),
           ),
         ]),
@@ -68,25 +73,34 @@ class AccountScreen extends StatelessWidget {
               const Icon(Icons.storefront_outlined, color: Brand.blue),
               const SizedBox(width: 10),
               Expanded(child: Text('${u.business!['name']}', style: const TextStyle(fontWeight: FontWeight.w700))),
-              TextButton(onPressed: () => _businessSheet(context), child: const Text('Edit')),
+              TextButton(onPressed: () => showBusinessSheet(context), child: const Text('Edit')),
             ]),
           ),
         ],
         const SizedBox(height: 18),
-        CardBox(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Column(children: [
-            _MenuRow(icon: Icons.local_shipping_outlined, title: 'Track my orders', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OrdersScreen()))),
-            const Divider(height: 1, indent: 56, color: Brand.line),
-            _MenuRow(icon: Icons.favorite_border, title: 'Saved products', trailing: '${u.favs.length}', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const _SavedScreen()))),
-            const Divider(height: 1, indent: 56, color: Brand.line),
-            _MenuRow(
-              icon: Icons.support_agent,
-              title: 'Customer service',
-              onTap: () => showMessage(context, 'WhatsApp us on ${AppConfig.supportWhatsapp} or email ${AppConfig.supportEmail}'),
-            ),
+        _menu([
+          _MenuRow(icon: Icons.local_shipping_outlined, title: 'Track my orders', onTap: () => _push(context, const OrdersScreen())),
+          _MenuRow(icon: Icons.account_balance_wallet_outlined, title: 'Wallet', trailing: moneyIn(s.balances['NGN'] ?? 0, 'NGN'), onTap: () => _push(context, const WalletScreen())),
+          _MenuRow(icon: Icons.swap_horiz_rounded, title: 'Exchange', onTap: () => _push(context, const ExchangeScreen())),
+          _MenuRow(icon: Icons.favorite_border, title: 'Saved products', trailing: '${u.favs.length}', onTap: () => _push(context, const _SavedScreen())),
+        ]),
+        if (s.isBusiness) ...[
+          const SizedBox(height: 14),
+          _menu([
+            _MenuRow(icon: Icons.smart_toy_outlined, title: 'AI business assistant', onTap: () => _push(context, const AssistantScreen())),
+            _MenuRow(icon: Icons.palette_outlined, title: 'Build my brand', onTap: () => _push(context, const BrandScreen())),
           ]),
-        ),
+        ],
+        const SizedBox(height: 14),
+        _menu([
+          _MenuRow(
+            icon: Icons.verified_user_outlined,
+            title: 'Account upgrades & KYC',
+            trailing: switch (u.verifyStatus) { 'verified' => 'Verified', 'pending' => 'Pending', _ => null },
+            onTap: () => _push(context, const KycScreen()),
+          ),
+          _MenuRow(icon: Icons.support_agent, title: 'Customer service', onTap: () => _push(context, const SupportScreen())),
+        ]),
         const SizedBox(height: 18),
         OutlinedButton.icon(
           onPressed: () async {
@@ -100,6 +114,15 @@ class AccountScreen extends StatelessWidget {
     );
   }
 
+  static void _push(BuildContext context, Widget screen) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+
+  static Widget _menu(List<Widget> rows) => CardBox(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(children: [
+          for (final (i, r) in rows.indexed) ...[if (i > 0) const Divider(height: 1, indent: 56, color: Brand.line), r],
+        ]),
+      );
+
   static Future<void> _run(BuildContext context, Future<void> work, String ok) async {
     try {
       await work;
@@ -108,8 +131,10 @@ class AccountScreen extends StatelessWidget {
       if (context.mounted) showMessage(context, e.toString(), error: true);
     }
   }
+}
 
-  static void _businessSheet(BuildContext context) {
+/// Asks for the business name and type, then switches to business buying.
+void showBusinessSheet(BuildContext context) {
     final s = context.read<AppState>();
     final name = TextEditingController(text: (s.user?.business?['name'] ?? '') as String);
     String? type = s.user?.business?['type'] as String?;
@@ -149,7 +174,7 @@ class AccountScreen extends StatelessWidget {
               onPressed: () {
                 if (!form.currentState!.validate()) return;
                 Navigator.pop(sheetContext);
-                _run(context, s.setBusiness(name.text, type!), 'You are now buying as a business');
+                AccountScreen._run(context, s.setBusiness(name.text, type!), 'You are now buying as a business');
               },
               child: const Text('Switch to business'),
             ),
@@ -157,7 +182,6 @@ class AccountScreen extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _Guest extends StatelessWidget {

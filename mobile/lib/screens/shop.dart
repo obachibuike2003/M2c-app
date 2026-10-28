@@ -100,7 +100,10 @@ const _sortLabels = {
 class ProductListScreen extends StatefulWidget {
   final String? categoryId;
   final bool searching;
-  const ProductListScreen({super.key, this.categoryId, this.searching = false});
+
+  /// Start filtered to 'new' or 'used' items.
+  final String condition;
+  const ProductListScreen({super.key, this.categoryId, this.searching = false, this.condition = ''});
 
   @override
   State<ProductListScreen> createState() => _ProductListScreenState();
@@ -110,7 +113,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
   final _search = TextEditingController();
   String _query = '';
   String? _sub;
-  String _condition = '';
+  late String _condition = widget.condition;
   _Sort _sort = _Sort.popular;
 
   @override

@@ -185,15 +185,17 @@ class AppState extends ChangeNotifier {
   Future<void> _saveCart() => _prefs.setString('cart', jsonEncode(cart.map((l) => l.toJson()).toList()));
 
   /// Adds to the cart; returns an error message, or null if it worked.
-  String? addToCart(Product p, int qty) {
+  /// [custom] is an AiStudio design; it replaces any design already on that line.
+  String? addToCart(Product p, int qty, {Map<String, dynamic>? custom}) {
     if (p.stock < 1) return 'This item is out of stock.';
     final i = cart.indexWhere((l) => l.productId == p.id);
     final inCart = i == -1 ? 0 : cart[i].qty;
     if (inCart + qty > p.stock) return 'Only ${p.stock} left in stock.';
     if (i == -1) {
-      cart.add(CartLine(p.id, qty));
+      cart.add(CartLine(p.id, qty, custom: custom));
     } else {
       cart[i].qty += qty;
+      if (custom != null) cart[i].custom = custom;
     }
     _saveCart();
     notifyListeners();
@@ -212,10 +214,10 @@ class AppState extends ChangeNotifier {
   }
 
   /// Cart lines joined with their products; lines whose product is gone are skipped.
-  List<({Product product, int qty, int unit, int total, bool short})> get cartLines => [
+  List<({Product product, int qty, int unit, int total, bool short, Map<String, dynamic>? custom})> get cartLines => [
         for (final l in cart)
           if (product(l.productId) case final p?)
-            (product: p, qty: l.qty, unit: unitPrice(p, l.qty), total: unitPrice(p, l.qty) * l.qty, short: l.qty < minQty(p)),
+            (product: p, qty: l.qty, unit: unitPrice(p, l.qty), total: unitPrice(p, l.qty) * l.qty, short: l.qty < minQty(p), custom: l.custom),
       ];
 
   int get subtotal => cartLines.fold(0, (n, l) => n + l.total);
@@ -227,7 +229,7 @@ class AppState extends ChangeNotifier {
   /// Places the order on the server, then empties the cart. Pay on delivery.
   Future<Order> placeOrder(Map<String, String> address) async {
     final data = await api.post('/api/orders', {
-      'items': [for (final l in cart) {'productId': l.productId, 'qty': l.qty}],
+      'items': [for (final l in cart) {'productId': l.productId, 'qty': l.qty, if (l.custom != null) 'custom': l.custom}],
       'address': address,
       'pay': 'delivery',
     });
@@ -276,8 +278,56 @@ class AppState extends ChangeNotifier {
     b[from] = _floor((b[from] ?? 0) - amount, dpOf(from));
     b[to] = _floor((b[to] ?? 0) + got, dpOf(to));
     await updateAccount({'balances': b});
+    await _addTxn({'type': 'exchange', 'desc': 'Exchanged $from to $to', 'amount': -amount, 'currency': from, 'gotAmount': got, 'gotCurrency': to});
     return got;
   }
+
+  // ---------------------------------------------------------------- wallet
+
+  /// Wallet history. Like the website, it's kept on this device only.
+  List<Map<String, dynamic>> get txns {
+    if (user == null) return const [];
+    final raw = _prefs.getString('txns_${user!.id}');
+    return raw == null ? [] : (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<void> _addTxn(Map<String, dynamic> t) async {
+    final list = [{'status': 'completed', 'createdAt': DateTime.now().millisecondsSinceEpoch, ...t}, ...txns];
+    await _prefs.setString('txns_${user!.id}', jsonEncode(list.take(200).toList()));
+  }
+
+  /// Demo top-up, same limits as the website: the money appears instantly.
+  Future<void> fundWallet(num amount) async {
+    if (user == null) throw ApiException('Please sign in first.');
+    if (!(amount >= 100)) throw ApiException('Enter at least ₦100.');
+    if (amount > 10000000) throw ApiException('The demo limit is ₦10,000,000 per top-up.');
+    final b = balances;
+    b['NGN'] = _floor((b['NGN'] ?? 0) + amount, 2);
+    await updateAccount({'balances': b});
+    await _addTxn({'type': 'fund', 'desc': 'Wallet top-up (demo)', 'amount': amount, 'currency': 'NGN'});
+    notifyListeners();
+  }
+
+  /// Sends money out of the wallet; it's held as "processing" until the store pays it.
+  Future<void> requestPayout(String code, num amount, String destination) async {
+    if (user == null) throw ApiException('Please sign in first.');
+    final b = balances;
+    if (!(amount > 0)) throw ApiException('Enter an amount.');
+    if (amount > (b[code] ?? 0)) throw ApiException('You do not have enough $code.');
+    if (destination.trim().isEmpty) throw ApiException('Enter where the money should go.');
+    b[code] = _floor((b[code] ?? 0) - amount, dpOf(code));
+    await updateAccount({'balances': b});
+    await _addTxn({'type': 'payout', 'desc': 'Send to ${destination.trim()}', 'amount': -amount, 'currency': code, 'status': 'processing'});
+    notifyListeners();
+  }
+
+  // ---------------------------------------------------------------- brand, identity
+
+  Future<void> saveBrand(Map<String, dynamic> brand) => updateAccount({'brand': {...?user?.brand, ...brand}});
+
+  /// Sends a selfie for the team to check, like the website's identity check.
+  Future<void> submitVerification(String selfieDataUrl) =>
+      updateAccount({'verify': {'status': 'pending', 'selfie': selfieDataUrl, 'at': DateTime.now().millisecondsSinceEpoch}});
 
   // ---------------------------------------------------------------- photo search
 
