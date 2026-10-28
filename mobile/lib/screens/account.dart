@@ -10,6 +10,7 @@ import 'auth.dart';
 import 'brand.dart';
 import 'exchange.dart';
 import 'orders.dart';
+import 'referral.dart';
 import 'support.dart';
 import 'wallet.dart';
 
@@ -78,6 +79,8 @@ class AccountScreen extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 18),
+        _InviteCard(credit: s.referralCredit, onTap: () => _push(context, const ReferralScreen())),
+        const SizedBox(height: 14),
         _menu([
           _MenuRow(icon: Icons.local_shipping_outlined, title: 'Track my orders', onTap: () => _push(context, const OrdersScreen())),
           _MenuRow(icon: Icons.account_balance_wallet_outlined, title: 'Wallet', trailing: moneyIn(s.balances['NGN'] ?? 0, 'NGN'), onTap: () => _push(context, const WalletScreen())),
@@ -99,7 +102,8 @@ class AccountScreen extends StatelessWidget {
             trailing: switch (u.verifyStatus) { 'verified' => 'Verified', 'pending' => 'Pending', _ => null },
             onTap: () => _push(context, const KycScreen()),
           ),
-          _MenuRow(icon: Icons.support_agent, title: 'Customer service', onTap: () => _push(context, const SupportScreen())),
+          // The AI answers first and hands over to a person when it needs one.
+          _MenuRow(icon: Icons.support_agent, title: 'Customer service', trailing: 'Chat', onTap: () => _push(context, const AssistantScreen(support: true))),
         ]),
         const SizedBox(height: 18),
         OutlinedButton.icon(
@@ -184,6 +188,50 @@ void showBusinessSheet(BuildContext context) {
         ),
       ),
     );
+}
+
+/// "Invite friends, earn naira" banner on the Account screen.
+class _InviteCard extends StatelessWidget {
+  final int credit;
+  final VoidCallback onTap;
+  const _InviteCard({required this.credit, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: 'Invite friends',
+        excludeSemantics: true,
+        child: Pressable(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(Brand.radius),
+              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF111216), Color(0xFF2A2C33)]),
+            ),
+            child: Row(children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(color: const Color(0xFFFFC83D), borderRadius: BorderRadius.circular(14)),
+                child: const Icon(Icons.card_giftcard, color: Brand.ink),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Invite friends, earn ${money(AppConfig.referralReward)}', style: Brand.head(16, color: Colors.white)),
+                  const SizedBox(height: 2),
+                  Text(
+                    credit > 0 ? 'You have ${money(credit)} off your next order' : 'They get ${money(AppConfig.referralReward)} off too',
+                    style: TextStyle(color: credit > 0 ? const Color(0xFFFFC83D) : Colors.white.withValues(alpha: 0.75), fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ]),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.white),
+            ]),
+          ),
+        ),
+      );
 }
 
 class _Guest extends StatelessWidget {

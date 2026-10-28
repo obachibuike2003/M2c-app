@@ -188,10 +188,10 @@ const Store = (() => {
 
   // signup() and login() talk to the server, so unlike the rest of Store they
   // return a Promise: `const res = await Store.login(...)`.
-  async function signup({ name, email, phone, whatsapp, password }) {
+  async function signup({ name, email, phone, whatsapp, password, referralCode }) {
     try {
       const data = await api('POST', '/api/auth/signup', {
-        name, email, phone, whatsapp, password,
+        name, email, phone, whatsapp, password, referralCode,
         profile: { mode: 'personal', balances: emptyBalances(), favs: [] }
       });
       write('token', data.token);

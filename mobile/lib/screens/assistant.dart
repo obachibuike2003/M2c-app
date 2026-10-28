@@ -14,6 +14,7 @@ import 'exchange.dart';
 import 'orders.dart';
 import 'product.dart';
 import 'shop.dart';
+import 'support.dart';
 
 /// Where an answer's buttons lead. `human` opens WhatsApp with a real person.
 enum _Go { brand, agent, orders, products, used, exchange, human }
@@ -335,6 +336,15 @@ class _AssistantScreenState extends State<AssistantScreen> {
             ]),
           ),
         ]),
+        actions: [
+          if (widget.support)
+            IconButton(
+              tooltip: 'More ways to reach us',
+              icon: const Icon(Icons.contact_support_outlined),
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SupportScreen())),
+            ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: Column(children: [
         Expanded(

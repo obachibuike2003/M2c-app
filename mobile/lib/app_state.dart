@@ -92,10 +92,11 @@ class AppState extends ChangeNotifier {
     await _saveLogin(data);
   }
 
-  Future<void> signup({required String name, required String phone, required String email, required String password}) async {
+  Future<void> signup({required String name, required String phone, required String email, required String password, String referralCode = ''}) async {
     final data = await api.post('/api/auth/signup', {
       'name': name, 'phone': phone, 'whatsapp': phone, 'email': email, 'password': password,
       'profile': {'mode': 'personal', 'favs': <String>[]},
+      if (referralCode.trim().isNotEmpty) 'referralCode': referralCode.trim(),
     }) as Map<String, dynamic>;
     await _saveLogin(data);
   }
@@ -226,7 +227,24 @@ class AppState extends ChangeNotifier {
 
   int get subtotal => cartLines.fold(0, (n, l) => n + l.total);
   int get shipping => subtotal == 0 || subtotal >= AppConfig.freeShippingFrom ? 0 : AppConfig.shippingFee;
-  int get total => subtotal + shipping;
+
+  /// Referral credit waiting on the account (set by the server, never by the app).
+  int get referralCredit => (((user?.raw['referral'] as Map?)?['credit'] ?? 0) as num).toInt();
+
+  /// What the next order will take off, same rule as the server: never more than the goods.
+  int get creditToUse => referralCredit < subtotal ? referralCredit : subtotal;
+  int get total => subtotal - creditToUse + shipping;
+
+  // ---------------------------------------------------------------- referrals
+
+  Future<Map<String, dynamic>> referral() async => await api.get('/api/referral') as Map<String, dynamic>;
+
+  /// Adds a friend's code after signing up (only before the first order).
+  Future<void> applyReferral(String code) async {
+    final res = await api.post('/api/referral/apply', {'code': code.trim()}) as Map<String, dynamic>;
+    user = User(Map<String, dynamic>.from(res['user'] as Map));
+    notifyListeners();
+  }
 
   // ---------------------------------------------------------------- orders
 

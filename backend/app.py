@@ -205,6 +205,49 @@ class User(db.Model, UserMixin):
 PROFILE_KEYS = {"mode", "business", "brand", "verify", "address", "termsAcceptedAt",
                 "balances", "favs", "agentId"}
 
+# Referrals. Kept in profile["referral"], which PATCH can't write (it isn't in
+# PROFILE_KEYS), so only the server changes codes and credit:
+#   {"code": "PETE4K7Q", "by": referrer user id, "credit": naira off the next
+#    order, "rewarded": True once the referrer has been paid for this person}
+# A friend who signs up with a code gets REFERRAL_REWARD off their first order;
+# the person who shared it gets the same once that friend places it.
+REFERRAL_REWARD = int(os.environ.get("REFERRAL_REWARD", 1000))
+
+
+def referral_of(user):
+    ref = (user.profile or {}).get("referral")
+    return dict(ref) if isinstance(ref, dict) else {}
+
+
+def set_referral(user, ref):
+    user.profile = {**(user.profile or {}), "referral": ref}  # reassigned so SQLAlchemy saves it
+
+
+def ensure_referral_code(user):
+    """Give the account its own short code the first time it's needed."""
+    ref = referral_of(user)
+    if ref.get("code"):
+        return ref["code"]
+    letters = re.sub(r"[^A-Z]", "", (user.name or "").upper())[:4] or "E2B"
+    taken = {referral_of(u).get("code") for u in User.query.all()}
+    while True:
+        code = letters + secrets.token_hex(2).upper()
+        if code not in taken:
+            break
+    ref["code"] = code
+    set_referral(user, ref)
+    return code
+
+
+def find_referrer(code):
+    code = str(code or "").strip().upper()
+    if not code:
+        return None
+    for u in User.query.all():
+        if referral_of(u).get("code") == code:
+            return u
+    return None
+
 
 class Product(db.Model):
     __tablename__ = "products"
@@ -574,11 +617,20 @@ def signup():
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "An account with this email already exists."}), 409
 
+    referrer = None
+    if str(data.get("referralCode") or "").strip():
+        referrer = find_referrer(data.get("referralCode"))
+        if not referrer:
+            return jsonify({"error": "That referral code isn't right. Check it, or leave it empty."}), 400
+
     user = User(id="u_" + uuid.uuid4().hex[:12], name=name, email=email, phone=phone,
                 whatsapp=data.get("whatsapp") or phone, profile={})
     user.set_password(password)
     # Starting account fields from the site (empty wallet, personal mode...).
     user.apply_patch(data.get("profile") or {"mode": "personal", "favs": []})
+    ensure_referral_code(user)
+    if referrer:
+        set_referral(user, {**referral_of(user), "by": referrer.id, "credit": REFERRAL_REWARD})
     db.session.add(user)
     db.session.commit()
 
@@ -800,15 +852,77 @@ def place_order():
         product.sold = (product.sold or 0) + qty
 
     delivery_fee = 0 if subtotal >= FREE_SHIPPING_FROM else SHIPPING_FEE
-    total = subtotal + delivery_fee
 
+    # Referral credit comes off the goods (never below zero).
+    ref = referral_of(current_user)
+    credit_used = min(int(ref.get("credit") or 0), subtotal)
+    total = subtotal - credit_used + delivery_fee
+    first_order = Order.query.filter_by(user_id=current_user.id).first() is None
+
+    if credit_used:
+        address = {**address, "creditUsed": credit_used}  # shown on the order as "Referral credit"
     order = Order(id="ORD-" + uuid.uuid4().hex[:6].upper(), user_id=current_user.id, mode=current_user.mode,
                   status="Order placed", stage=0, subtotal=subtotal, delivery_fee=delivery_fee, total=total,
                   address=address, pay="delivery", tracking=[{"stage": 0, "at": now().isoformat()}], items=order_items)
     db.session.add(order)
+
+    if credit_used:
+        set_referral(current_user, {**ref, "credit": int(ref.get("credit") or 0) - credit_used})
+        ref = referral_of(current_user)
+    # The friend's first order pays the person who invited them, once.
+    if first_order and ref.get("by") and not ref.get("rewarded"):
+        referrer = db.session.get(User, ref["by"])
+        if referrer:
+            rr = referral_of(referrer)
+            set_referral(referrer, {**rr, "credit": int(rr.get("credit") or 0) + REFERRAL_REWARD})
+        set_referral(current_user, {**ref, "rewarded": True})
     db.session.commit()
 
     return jsonify(order.to_dict()), 201
+
+
+# --- referrals -------------------------------------------------------------
+
+@app.get("/api/referral")
+@login_required
+def get_referral():
+    """The person's code, what they've earned and who they've brought in."""
+    code = ensure_referral_code(current_user)
+    db.session.commit()
+    invited = [u for u in User.query.all() if referral_of(u).get("by") == current_user.id]
+    ref = referral_of(current_user)
+    has_orders = Order.query.filter_by(user_id=current_user.id).first() is not None
+    return jsonify({
+        "code": code,
+        "reward": REFERRAL_REWARD,
+        "credit": int(ref.get("credit") or 0),
+        "invited": len(invited),
+        "ordered": sum(1 for u in invited if referral_of(u).get("rewarded")),
+        "earned": REFERRAL_REWARD * sum(1 for u in invited if referral_of(u).get("rewarded")),
+        "referredBy": bool(ref.get("by")),
+        # A code can still be added after signing up, until the first order.
+        "canApply": not ref.get("by") and not has_orders,
+    })
+
+
+@app.post("/api/referral/apply")
+@login_required
+def apply_referral():
+    """Add a friend's code after signing up (only before the first order)."""
+    data = request.get_json(silent=True) or {}
+    ref = referral_of(current_user)
+    if ref.get("by"):
+        return jsonify({"error": "You've already used a referral code."}), 400
+    if Order.query.filter_by(user_id=current_user.id).first():
+        return jsonify({"error": "Referral codes are for new customers, before their first order."}), 400
+    referrer = find_referrer(data.get("code"))
+    if not referrer:
+        return jsonify({"error": "That referral code isn't right."}), 400
+    if referrer.id == current_user.id:
+        return jsonify({"error": "You can't use your own code. Share it with a friend instead."}), 400
+    set_referral(current_user, {**ref, "by": referrer.id, "credit": int(ref.get("credit") or 0) + REFERRAL_REWARD})
+    db.session.commit()
+    return jsonify({"user": current_user.to_dict(), "credit": referral_of(current_user)["credit"]})
 
 
 # --- recommendations -----------------------------------------------------

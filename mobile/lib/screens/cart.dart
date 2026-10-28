@@ -117,6 +117,7 @@ class CartScreen extends StatelessWidget {
               CardBox(
                 child: Column(children: [
                   _row('Subtotal', money(s.subtotal)),
+                  if (s.creditToUse > 0) _row('Referral credit', '-${money(s.creditToUse)}'),
                   _row('Delivery', s.shipping == 0 ? 'Free' : money(s.shipping)),
                   if (s.shipping > 0)
                     Padding(
@@ -304,6 +305,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ]),
                 ),
               const Divider(height: 20, color: Brand.line),
+              if (s.creditToUse > 0)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(children: [
+                    const Text('Referral credit', style: TextStyle(color: Brand.green)),
+                    const Spacer(),
+                    Text('-${money(s.creditToUse)}', style: const TextStyle(color: Brand.green, fontWeight: FontWeight.w700)),
+                  ]),
+                ),
               Row(children: [const Text('Delivery', style: TextStyle(color: Brand.muted)), const Spacer(), Text(s.shipping == 0 ? 'Free' : money(s.shipping))]),
               const SizedBox(height: 8),
               Row(children: [Text('Total', style: Brand.head(18)), const Spacer(), Text(money(s.total), style: Brand.head(22, weight: FontWeight.w800))]),

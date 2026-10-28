@@ -102,12 +102,14 @@ class _SignupScreenState extends State<SignupScreen> {
   final _phone = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  // A shared invite link looks like https://app.../?ref=CODE; pre-fill it.
+  final _referral = TextEditingController(text: Uri.base.queryParameters['ref']?.toUpperCase() ?? '');
   bool _busy = false, _hide = true, _terms = false;
   String? _error;
 
   @override
   void dispose() {
-    for (final c in [_name, _phone, _email, _password]) {
+    for (final c in [_name, _phone, _email, _password, _referral]) {
       c.dispose();
     }
     super.dispose();
@@ -122,7 +124,7 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() { _busy = true; _error = null; });
     try {
       final s = context.read<AppState>();
-      await s.signup(name: _name.text.trim(), phone: _phone.text.trim(), email: _email.text.trim(), password: _password.text);
+      await s.signup(name: _name.text.trim(), phone: _phone.text.trim(), email: _email.text.trim(), password: _password.text, referralCode: _referral.text);
       await s.updateAccount({'termsAcceptedAt': DateTime.now().millisecondsSinceEpoch}).catchError((_) {});
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
@@ -175,6 +177,16 @@ class _SignupScreenState extends State<SignupScreen> {
               suffixIcon: IconButton(icon: Icon(_hide ? Icons.visibility_outlined : Icons.visibility_off_outlined), onPressed: () => setState(() => _hide = !_hide)),
             ),
             validator: (v) => (v ?? '').length < 6 ? 'Your password needs at least 6 characters' : null,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _referral,
+            textCapitalization: TextCapitalization.characters,
+            decoration: const InputDecoration(
+              labelText: 'Referral code (optional)',
+              helperText: 'Got one from a friend? You get money off your first order.',
+              prefixIcon: Icon(Icons.card_giftcard_outlined),
+            ),
           ),
           const SizedBox(height: 8),
           CheckboxListTile(

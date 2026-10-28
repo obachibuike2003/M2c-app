@@ -13,7 +13,9 @@ mountChrome('login');
     return;
   }
 
-  let mode = 'in';
+  // An invite link (login.html?ref=CODE) opens straight on "Create account" with the code filled in.
+  const refCode = (new URLSearchParams(location.search).get('ref') || '').trim().toUpperCase();
+  let mode = refCode ? 'up' : 'in';
   // The sign-up side is a 4-step onboarding wizard: create account (with a demo OTP step),
   // agree to terms, pick personal/business, then (business only) meet the assigned agent.
   let step = 1;
@@ -21,7 +23,7 @@ mountChrome('login');
   let otpCode = '';
   const wizard = { mode: 'personal', bizType: '', bizName: '' };
   // Revealing the OTP field re-renders step 1, so what's already typed has to survive that.
-  const signupData = { name: '', phone: '', email: '', password: '' };
+  const signupData = { name: '', phone: '', email: '', password: '', referral: refCode };
 
   const STEP_NAMES = ['Create account', 'Terms & conditions', 'Your profile', 'Your agent'];
 
@@ -59,6 +61,7 @@ mountChrome('login');
         <label class="field"><span>Phone number</span><input name="phone" type="tel" inputmode="tel" autocomplete="tel" value="${esc(signupData.phone)}" ${otpSent ? 'readonly' : ''} required></label>
         <label class="field"><span>Email</span><input name="email" type="email" autocomplete="email" value="${esc(signupData.email)}" ${otpSent ? 'readonly' : ''} required></label>
         <label class="field"><span>Password</span><input name="password" type="password" autocomplete="new-password" value="${esc(signupData.password)}" required minlength="6"><small class="hint">At least 6 characters</small></label>
+        <label class="field"><span>Referral code (optional)</span><input name="referral" autocomplete="off" maxlength="12" style="text-transform:uppercase" value="${esc(signupData.referral)}" ${otpSent ? 'readonly' : ''}><small class="hint">Got one from a friend? You get ${money(1000)} off your first order.</small></label>
         ${!otpSent ? `
           <button type="button" class="btn btn-outline btn-block mt-16" id="send-otp">Send verification code</button>
           <p class="hint">We'll text a one-time code to your phone to confirm it's really you.</p>` : `
@@ -149,6 +152,7 @@ mountChrome('login');
       signupData.phone = form.phone.value.trim();
       signupData.email = form.email.value.trim();
       signupData.password = form.password.value;
+      signupData.referral = form.referral.value.trim().toUpperCase();
       const error = $('#auth-error');
       if (!signupData.name) return showError(error, 'Enter your full name.');
       if (!/^[0-9+\s-]{7,}$/.test(signupData.phone)) return showError(error, 'Enter a valid phone number.');
@@ -228,7 +232,7 @@ mountChrome('login');
     if (!otpSent) return;
     if ((data.otp || '').trim() !== otpCode) return showError(error, 'That code is not right. Check the toast and try again.');
     if (data.password.length < 6) return showError(error, 'Your password needs at least 6 characters.');
-    const res = await withBusy(form, () => Store.signup({ name: data.name, phone: data.phone, email: data.email, whatsapp: data.phone, password: data.password }));
+    const res = await withBusy(form, () => Store.signup({ name: data.name, phone: data.phone, email: data.email, whatsapp: data.phone, password: data.password, referralCode: signupData.referral }));
     if (!res.ok) return showError(error, res.error);
     step = 2;
     render();

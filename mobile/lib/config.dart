@@ -20,6 +20,12 @@ class AppConfig {
   static const supportEmail = 'support@example.com';
   static const supportWhatsapp = '+234 800 000 0000';
 
+  /// Referral reward each side gets; the server's REFERRAL_REWARD is what's actually paid.
+  static const referralReward = 1000;
+
+  /// Where invite links send people (the hosted app).
+  static const appUrl = 'https://app.13-48-31-7.sslip.io';
+
   static const shippingFee = 2500;
   static const freeShippingFrom = 50000;
 
