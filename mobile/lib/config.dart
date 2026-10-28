@@ -5,8 +5,11 @@ class AppConfig {
   /// server: flutter run --dart-define=API_BASE=http://127.0.0.1:5000
   static const apiBase = String.fromEnvironment('API_BASE', defaultValue: 'https://m2c.13-48-31-7.sslip.io');
 
-  /// The static website, which hosts the product photos (assets/products/...).
-  static const siteBase = 'https://m2c-app-vqeb.onrender.com';
+  /// Where the product photos (assets/products/...) are served from: the
+  /// website by default. The hosted web app sets this to '' and serves the
+  /// photos itself, from the same address, so the browser lets the app draw
+  /// on them (AiStudio colours and previews).
+  static const siteBase = String.fromEnvironment('SITE_BASE', defaultValue: 'https://m2c-app-vqeb.onrender.com');
 
   static const appName = 'Easy2buy';
   static const tagline = 'Shop China. Pay in Naira.';
