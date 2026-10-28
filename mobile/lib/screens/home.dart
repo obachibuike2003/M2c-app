@@ -104,8 +104,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             SliverToBoxAdapter(child: _HeroSlider(goToTab: widget.goToTab)),
-            const SliverToBoxAdapter(child: _Perks()),
-            SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.fromLTRB(16, 18, 16, 0), child: _ModeCard(goToTab: widget.goToTab))),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 26, 16, 0),
@@ -460,100 +458,6 @@ class _FlashDealsState extends State<_FlashDeals> {
           ),
         ]),
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------- perks, mode
-
-class _Perks extends StatelessWidget {
-  const _Perks();
-
-  @override
-  Widget build(BuildContext context) {
-    final perks = [
-      (Icons.local_shipping_outlined, 'Shipped from China', 'Free above ${money(AppConfig.freeShippingFrom)}'),
-      (Icons.verified_user_outlined, 'Buyer protection', 'Your money is safe'),
-      (Icons.payments_outlined, 'Pay on delivery', 'Pay when it arrives'),
-      (Icons.support_agent, 'Real support', 'We answer every order'),
-    ];
-    return SizedBox(
-      height: 74,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-        itemCount: perks.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 10),
-        itemBuilder: (_, i) {
-          final (icon, title, text) = perks[i];
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Brand.line)),
-            child: Row(children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(color: Brand.redSoft, borderRadius: BorderRadius.circular(10)),
-                child: Icon(icon, color: Brand.red600, size: 19),
-              ),
-              const SizedBox(width: 10),
-              Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
-                Text(text, style: const TextStyle(color: Brand.muted, fontSize: 11.5)),
-              ]),
-            ]),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _ModeCard extends StatelessWidget {
-  final ValueChanged<int> goToTab;
-  const _ModeCard({required this.goToTab});
-
-  @override
-  Widget build(BuildContext context) {
-    final s = context.watch<AppState>();
-    final u = s.user;
-    final business = s.isBusiness && u?.business != null;
-    return CardBox(
-      child: Row(children: [
-        Container(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(color: Brand.blueSoft, borderRadius: BorderRadius.circular(14)),
-          child: const Icon(Icons.work_outline, color: Brand.blue),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(business ? 'BUSINESS BUYING' : 'OWN A BUSINESS?', style: const TextStyle(color: Brand.blue, fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 1.1)),
-            const SizedBox(height: 2),
-            Text(business ? '${u!.business!['name']}' : 'Buy in bulk at wholesale prices', style: Brand.head(16)),
-            const SizedBox(height: 2),
-            Text(
-              business ? 'Wholesale prices from ${AppConfig.bulkMinQty} pieces' : 'From ${AppConfig.bulkMinQty} pieces, up to 15% off. Free.',
-              style: const TextStyle(color: Brand.muted, fontSize: 12.5),
-            ),
-          ]),
-        ),
-        const SizedBox(width: 8),
-        FilledButton(
-          style: FilledButton.styleFrom(
-            minimumSize: const Size(0, 38),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            backgroundColor: business ? Brand.ink : Brand.red,
-            textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-          ),
-          onPressed: () {
-            if (u == null) showMessage(context, 'Sign in first, then switch to business');
-            goToTab(4);
-          },
-          child: Text(business ? 'Manage' : 'Switch'),
-        ),
-      ]),
     );
   }
 }
