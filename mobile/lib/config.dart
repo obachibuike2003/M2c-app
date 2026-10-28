@@ -20,6 +20,19 @@ class AppConfig {
   static const bulkMinQty = 10;
   static const bulkTiers = [(from: 10, off: 5), (from: 50, off: 10), (from: 100, off: 15)];
 
+  /// Exchange rates in naira per 1 unit, the website's SEED_RATES (js/data.js).
+  /// "buy" is what a customer pays, "sell" is what they receive. Demo rates.
+  static const rates = [
+    (code: 'CNY', name: 'Chinese Yuan (RMB)', crypto: false, dp: 2, buy: 219.0, sell: 213.0),
+    (code: 'USDT', name: 'Tether', crypto: true, dp: 2, buy: 1560.0, sell: 1535.0),
+    (code: 'USDC', name: 'USD Coin', crypto: true, dp: 2, buy: 1558.0, sell: 1533.0),
+    (code: 'BTC', name: 'Bitcoin', crypto: true, dp: 8, buy: 165000000.0, sell: 162500000.0),
+    (code: 'ETH', name: 'Ethereum', crypto: true, dp: 6, buy: 5900000.0, sell: 5800000.0),
+    (code: 'BNB', name: 'BNB', crypto: true, dp: 5, buy: 1050000.0, sell: 1030000.0),
+    (code: 'SOL', name: 'Solana', crypto: true, dp: 4, buy: 310000.0, sell: 304000.0),
+    (code: 'TRX', name: 'TRON', crypto: true, dp: 2, buy: 420.0, sell: 410.0),
+  ];
+
   static const trackStages = [
     'Order placed', 'Confirmed', 'Bought from supplier', 'Shipped from China',
     'Arrived in Nigeria', 'At our Lagos warehouse', 'Out for delivery', 'Delivered',

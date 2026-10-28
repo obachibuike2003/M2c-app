@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show ChangeNotifier;
+import 'package:flutter/foundation.dart' show ChangeNotifier, Uint8List;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api.dart';
@@ -224,6 +224,60 @@ class AppState extends ChangeNotifier {
     await updateAccount({'address': address}).catchError((_) {});
     await refresh(); // stock and "sold" counts changed
     return Order(Map<String, dynamic>.from(data as Map));
+  }
+
+  // ---------------------------------------------------------------- exchange
+
+  /// Wallet balances per currency code, saved on the account like the website's.
+  Map<String, num> get balances => {
+        for (final e in ((user?.raw['balances'] as Map?) ?? const {}).entries) '${e.key}': (e.value as num? ?? 0),
+      };
+
+  static int dpOf(String code) => code == 'NGN' ? 2 : AppConfig.rates.firstWhere((r) => r.code == code).dp;
+
+  static double _floor(num n, int dp) {
+    final f = 1.0 * _pow10(dp);
+    return (n * f + 1e-9).floorToDouble() / f;
+  }
+
+  static num _pow10(int dp) => [for (var i = 0; i < dp; i++) 10].fold<num>(1, (a, b) => a * b);
+
+  /// How much of [to] you get for [amount] of [from]; same maths as the site's Store.quote.
+  double quote(String from, String to, num amount) {
+    if (amount <= 0) return 0;
+    if (from == 'NGN') {
+      final r = AppConfig.rates.firstWhere((r) => r.code == to);
+      return _floor(amount / r.buy, r.dp);
+    }
+    final r = AppConfig.rates.firstWhere((r) => r.code == from);
+    return _floor(amount * r.sell, 2);
+  }
+
+  /// Swaps wallet money; returns how much arrived. Throws with a message the screen can show.
+  Future<double> exchange(String from, String to, num amount) async {
+    if (user == null) throw ApiException('Please sign in first.');
+    final b = balances;
+    if (!(amount > 0)) throw ApiException('Enter an amount.');
+    if (amount > (b[from] ?? 0)) throw ApiException('You do not have enough $from in your wallet.');
+    final got = quote(from, to, amount);
+    if (!(got > 0)) throw ApiException('That amount is too small to exchange.');
+    b[from] = _floor((b[from] ?? 0) - amount, dpOf(from));
+    b[to] = _floor((b[to] ?? 0) + got, dpOf(to));
+    await updateAccount({'balances': b});
+    return got;
+  }
+
+  // ---------------------------------------------------------------- photo search
+
+  /// Products that look like the photo, best match first. [label] is what the
+  /// server's AI thinks the item is, when it has an AI key set.
+  Future<({String? label, List<Product> products})> searchByPhoto(Uint8List bytes, String mime) async {
+    final data = await api.request('POST', '/api/search/photo',
+        body: {'image': 'data:$mime;base64,${base64Encode(bytes)}', 'limit': 30},
+        timeout: const Duration(seconds: 60)) as Map<String, dynamic>;
+    // Use this device's copies, so prices and stock match the rest of the app.
+    final found = [for (final j in data['products'] as List) product((j as Map)['id'] as String) ?? Product.fromJson(Map<String, dynamic>.from(j))];
+    return (label: data['label'] as String?, products: found);
   }
 
   Future<List<Order>> myOrders() async {

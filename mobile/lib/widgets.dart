@@ -102,6 +102,16 @@ String money(num amount) {
   return out.toString();
 }
 
+/// An amount in any wallet currency: ₦ and ¥ get symbols, crypto shows its code.
+String moneyIn(num amount, String code) {
+  var s = amount.abs().toStringAsFixed(AppState.dpOf(code));
+  // Like the site: yuan always shows 2 decimals, everything else drops trailing zeros.
+  if (code != 'CNY' && s.contains('.')) s = s.replaceFirst(RegExp(r'\.?0+$'), '');
+  final parts = s.split('.');
+  final n = '${amount < 0 ? '-' : ''}${money(int.parse(parts[0])).substring(1)}${parts.length > 1 ? '.${parts[1]}' : ''}';
+  return code == 'NGN' ? '₦$n' : code == 'CNY' ? '¥$n' : '$n $code';
+}
+
 String compact(int n) => n >= 1000 ? '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1).replaceAll('.0', '')}k' : '$n';
 
 void showMessage(BuildContext context, String text, {bool error = false}) {
@@ -120,28 +130,18 @@ void showMessage(BuildContext context, String text, {bool error = false}) {
 
 // ---------------------------------------------------------------- brand
 
-/// The "E" tile from the site's logo, tilted like the original.
+/// The red shopping bag with the "E" (assets/logo_mark.png, cut from assets/Easybuy.jpeg).
 class LogoMark extends StatelessWidget {
   final double size;
   const LogoMark({super.key, this.size = 36});
 
   @override
-  Widget build(BuildContext context) {
-    return Transform.rotate(
-      angle: -0.105,
-      child: Container(
-        width: size,
+  Widget build(BuildContext context) => Image.asset(
+        'assets/logo_mark.png',
         height: size,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(size * 0.3),
-          gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFFF4055), Brand.red, Brand.red700]),
-          boxShadow: const [BoxShadow(color: Color(0x52E0182D), blurRadius: 26, offset: Offset(0, 10))],
-        ),
-        child: Text('E', style: Brand.head(size * 0.5, weight: FontWeight.w800, color: Colors.white)),
-      ),
-    );
-  }
+        filterQuality: FilterQuality.medium,
+        semanticLabel: '${AppConfig.appName} logo',
+      );
 }
 
 class Logo extends StatelessWidget {
@@ -230,7 +230,10 @@ class CategoryBubble extends StatelessWidget {
 class ProductCard extends StatelessWidget {
   final Product product;
   final int index;
-  const ProductCard({super.key, required this.product, this.index = 0});
+
+  /// Flash-deal style: a "claimed" bar in place of the rating row, like the site.
+  final bool deal;
+  const ProductCard({super.key, required this.product, this.index = 0, this.deal = false});
 
   @override
   Widget build(BuildContext context) {
@@ -263,6 +266,8 @@ class ProductCard extends StatelessWidget {
                   ),
                 ),
                 if (p.used) Positioned(left: 8, bottom: 8, child: _badge('Used', const Color(0xFFFFF1D6), const Color(0xFF8F4D00))),
+                if (!s.isBusiness && p.discount > 0)
+                  Positioned(left: 6, top: 6, child: _badge('-${p.discount}%', Brand.red, Colors.white)),
                 Positioned(
                   top: 6,
                   right: 6,
@@ -299,6 +304,9 @@ class ProductCard extends StatelessWidget {
                 Text(money(p.oldPrice), style: const TextStyle(fontSize: 11.5, color: Brand.muted, decoration: TextDecoration.lineThrough)),
             ]),
             const SizedBox(height: 4),
+            if (deal)
+              _Claimed(percent: 35 + p.sold % 58) // same made-up-but-stable figure the site shows
+            else
             Row(children: [
               const Icon(Icons.star_rounded, size: 15, color: Brand.star),
               Text(' ${p.rating > 0 ? p.rating.toStringAsFixed(1) : 'New'}', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600)),
@@ -310,6 +318,28 @@ class ProductCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _Claimed extends StatelessWidget {
+  final int percent;
+  const _Claimed({required this.percent});
+
+  @override
+  Widget build(BuildContext context) => Row(children: [
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(9),
+            child: LinearProgressIndicator(
+              value: percent / 100,
+              minHeight: 6,
+              backgroundColor: Brand.redSoft,
+              valueColor: const AlwaysStoppedAnimation(Brand.red),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text('$percent% claimed', style: const TextStyle(fontSize: 11, color: Brand.muted, fontWeight: FontWeight.w600)),
+      ]);
 }
 
 Future<void> _toggleFav(BuildContext context, AppState s, Product p) async {

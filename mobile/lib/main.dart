@@ -7,6 +7,7 @@ import 'app_state.dart';
 import 'config.dart';
 import 'screens/account.dart';
 import 'screens/cart.dart';
+import 'screens/exchange.dart';
 import 'screens/home.dart';
 import 'screens/onboarding.dart';
 import 'screens/shop.dart';
@@ -92,7 +93,7 @@ class Shell extends StatefulWidget {
 class _ShellState extends State<Shell> {
   int _tab = 0;
   // One navigator per tab, so each keeps its own back stack like native apps.
-  final _keys = List.generate(4, (_) => GlobalKey<NavigatorState>());
+  final _keys = List.generate(5, (_) => GlobalKey<NavigatorState>());
 
   void _go(int i) {
     if (i == _tab) {
@@ -105,7 +106,8 @@ class _ShellState extends State<Shell> {
   Widget _root(int i) => switch (i) {
         0 => HomeScreen(goToTab: _go),
         1 => const CategoriesScreen(),
-        2 => const CartScreen(asTab: true),
+        2 => const ExchangeScreen(),
+        3 => const CartScreen(asTab: true),
         _ => const AccountScreen(),
       };
 
@@ -127,7 +129,7 @@ class _ShellState extends State<Shell> {
       child: Scaffold(
         // Not extendBody: pushed screens (product, checkout) keep their bottom buttons above the bar.
         body: IndexedStack(index: _tab, children: [
-          for (var i = 0; i < 4; i++)
+          for (var i = 0; i < 5; i++)
             Navigator(key: _keys[i], onGenerateRoute: (_) => MaterialPageRoute(builder: (_) => _root(i))),
         ]),
         bottomNavigationBar: _TabBar(index: _tab, onTap: _go),
@@ -136,6 +138,8 @@ class _ShellState extends State<Shell> {
   }
 }
 
+/// Same five tabs and look as the website's bottom bar: outline icons, the
+/// open tab in red, "Sign in" in place of "Account" until you log in.
 class _TabBar extends StatelessWidget {
   final int index;
   final ValueChanged<int> onTap;
@@ -144,21 +148,23 @@ class _TabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final count = context.select<AppState, int>((s) => s.cartCount);
+    final signedIn = context.select<AppState, bool>((s) => s.user != null);
     final tabs = [
-      (Icons.home_outlined, Icons.home_rounded, 'Home'),
-      (Icons.grid_view_outlined, Icons.grid_view_rounded, 'Shop'),
-      (Icons.shopping_bag_outlined, Icons.shopping_bag, 'Cart'),
-      (Icons.person_outline, Icons.person, 'Account'),
+      (Icons.home_outlined, 'Home'),
+      (Icons.grid_view_outlined, 'Shop'),
+      (Icons.swap_horiz_rounded, 'Exchange'),
+      (Icons.shopping_cart_outlined, 'Cart'),
+      (Icons.person_outline_rounded, signedIn ? 'Account' : 'Sign in'),
     ];
     return SafeArea(
-      minimum: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+      minimum: const EdgeInsets.fromLTRB(12, 0, 12, 10),
       child: Container(
-        height: 66,
+        height: 68,
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          color: Colors.white.withValues(alpha: 0.96),
+          borderRadius: BorderRadius.circular(22),
           border: Border.all(color: Brand.line),
-          boxShadow: const [BoxShadow(color: Color(0x1F111216), blurRadius: 28, offset: Offset(0, 10))],
+          boxShadow: const [BoxShadow(color: Color(0x1A111216), blurRadius: 24, offset: Offset(0, 8))],
         ),
         child: Row(children: [
           for (var i = 0; i < tabs.length; i++)
@@ -169,22 +175,19 @@ class _TabBar extends StatelessWidget {
                 child: Semantics(
                   selected: i == index,
                   button: true,
-                  label: tabs[i].$3,
+                  label: tabs[i].$2,
+                  excludeSemantics: true,
                   child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                     Badge(
-                      isLabelVisible: i == 2 && count > 0,
-                      label: Text('$count'),
+                      isLabelVisible: i == 3 && count > 0,
+                      label: Text('$count', style: const TextStyle(fontWeight: FontWeight.w800)),
                       backgroundColor: Brand.red,
-                      child: Container(
-                        width: 52,
-                        height: 30,
-                        decoration: BoxDecoration(color: i == index ? Brand.redSoft : Colors.transparent, borderRadius: BorderRadius.circular(99)),
-                        child: Icon(i == index ? tabs[i].$2 : tabs[i].$1, color: i == index ? Brand.red600 : Brand.muted, size: 23),
-                      ),
+                      offset: const Offset(8, -6),
+                      child: Icon(tabs[i].$1, color: i == index ? Brand.red : Brand.text, size: 26),
                     ),
-                    const SizedBox(height: 3),
-                    Text(tabs[i].$3,
-                        style: TextStyle(fontSize: 11.5, fontWeight: i == index ? FontWeight.w700 : FontWeight.w500, color: i == index ? Brand.ink : Brand.muted)),
+                    const SizedBox(height: 4),
+                    Text(tabs[i].$2,
+                        style: TextStyle(fontSize: 12, fontWeight: i == index ? FontWeight.w700 : FontWeight.w500, color: i == index ? Brand.red : Brand.text)),
                   ]),
                 ),
               ),

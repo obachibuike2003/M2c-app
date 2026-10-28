@@ -11,27 +11,14 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: Brand.red,
+        backgroundColor: Colors.white,
         body: Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Transform.rotate(
-              angle: -0.105,
-              child: Container(
-                width: 84,
-                height: 84,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(26),
-                  boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 30, offset: Offset(0, 14))],
-                ),
-                child: Text('E', style: Brand.head(44, weight: FontWeight.w800, color: Brand.red)),
-              ),
-            ),
+            const LogoMark(size: 104),
             const SizedBox(height: 18),
-            Text(AppConfig.appName, style: Brand.head(32, weight: FontWeight.w800, color: Colors.white).copyWith(letterSpacing: -0.6)),
+            Text(AppConfig.appName, style: Brand.head(32, weight: FontWeight.w800, color: Brand.red).copyWith(letterSpacing: -0.6)),
             const SizedBox(height: 4),
-            Text(AppConfig.tagline, style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontWeight: FontWeight.w500)),
+            Text(AppConfig.tagline, style: const TextStyle(color: Brand.muted, fontWeight: FontWeight.w500)),
           ]),
         ),
       );

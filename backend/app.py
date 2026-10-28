@@ -627,6 +627,7 @@ def update_me():
 
 @app.get("/api/bootstrap")
 def bootstrap():
+    warm_photo_search()
     user = current_user if current_user.is_authenticated else None
     data = {
         "categories": [c.to_dict() for c in Category.query.order_by(Category.sort, Category.name).all()],
@@ -871,6 +872,174 @@ def generate_design():
 
     b64 = res.json()["data"][0]["b64_json"]
     return jsonify({"image": f"data:image/png;base64,{b64}"})
+
+
+# ---------------------------------------------------------------------------
+# 7b. Search by photo - backs the camera button in the app's search bar.
+# Works with no API key: every product photo gets a colour fingerprint
+# (hue/saturation/brightness histogram, centre-weighted, white background
+# ignored) and the closest ones win. With OPENAI_API_KEY set, a vision model
+# also names the item and its category, which outweighs colour alone.
+# ---------------------------------------------------------------------------
+
+REPO_ROOT = Path(__file__).resolve().parent.parent  # product photos live in ../assets
+PHOTO_MAX_BYTES = 8 * 1024 * 1024
+_fingerprints = {}  # (product id, img) -> histogram, built on first use
+
+
+def _open_image(src):
+    """A PIL image from a data: URL, an http(s) URL or a path under the site root."""
+    import base64
+    import io
+    from PIL import Image
+
+    if src.startswith("data:"):
+        raw = base64.b64decode(src.split(",", 1)[1])
+    elif src.startswith("http"):
+        raw = requests.get(src, timeout=8).content
+    else:
+        path = (REPO_ROOT / src).resolve()
+        if REPO_ROOT not in path.parents:
+            raise ValueError("image path outside the site")
+        raw = path.read_bytes()
+    return Image.open(io.BytesIO(raw))
+
+
+def _fingerprint(img):
+    """Normalised 12x3x3 HSV histogram. Pixels near the centre count more, and
+    near-white or transparent ones (studio backgrounds) barely count."""
+    from PIL import Image
+
+    img.draft("RGB", (160, 160))  # JPEGs decode straight at low resolution
+    img.thumbnail((160, 160), Image.Resampling.BILINEAR, reducing_gap=2.0)
+    img = img.convert("RGBA")
+    flat = Image.new("RGBA", img.size, (255, 255, 255, 255))
+    flat.alpha_composite(img)
+    small = flat.convert("RGB").resize((48, 48), Image.Resampling.BILINEAR)
+    hsv = small.convert("HSV")
+    rgb_px, hsv_px = small.load(), hsv.load()
+
+    hist = [0.0] * (12 * 3 * 3)
+    for y in range(48):
+        for x in range(48):
+            r, g, b = rgb_px[x, y]
+            h, s, v = hsv_px[x, y]
+            dx, dy = (x - 23.5) / 24, (y - 23.5) / 24
+            w = max(0.05, 1 - (dx * dx + dy * dy) * 0.6)
+            if r > 232 and g > 232 and b > 232:
+                w *= 0.08
+            # Greys have no meaningful hue: put them in hue bin 0 with low saturation.
+            hb = 0 if s < 40 else min(11, h * 12 // 256)
+            hist[(hb * 3 + min(2, s * 3 // 256)) * 3 + min(2, v * 3 // 256)] += w
+    total = sum(hist) or 1
+    return [x / total for x in hist]
+
+
+def _product_fingerprint(p):
+    key = (p.id, p.img)
+    if key not in _fingerprints:
+        try:
+            _fingerprints[key] = _fingerprint(_open_image(p.img)) if p.img else None
+        except Exception:  # missing or unreadable photo: just leave it out of colour matching
+            _fingerprints[key] = None
+    return _fingerprints[key]
+
+
+_warm_started = False
+
+
+def warm_photo_search():
+    """Fingerprint every product photo in the background, once per process, so
+    the first photo search doesn't wait for all of them. Started from the first
+    page load rather than at import: gunicorn's preload forks after import, and
+    a thread started before the fork wouldn't survive into the worker."""
+    global _warm_started
+    if _warm_started:
+        return
+    _warm_started = True
+
+    def run():
+        with app.app_context():
+            try:
+                for p in Product.query.all():
+                    _product_fingerprint(p)
+            except Exception:
+                pass  # Pillow missing etc.; the search route reports it properly
+
+    import threading
+    threading.Thread(target=run, daemon=True).start()
+
+
+def _describe_photo(data_url, categories):
+    """Ask a vision model what the item is. Returns {label, category, keywords} or None."""
+    if not OPENAI_API_KEY:
+        return None
+    cats = ", ".join(f"{c.id} ({c.name})" for c in categories)
+    try:
+        res = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
+            json={
+                "model": "gpt-4o-mini",
+                "response_format": {"type": "json_object"},
+                "max_tokens": 150,
+                "messages": [{"role": "user", "content": [
+                    {"type": "text", "text": (
+                        "What product is in this photo? Reply as JSON: "
+                        '{"label": short name, "category": one id from this list or null, '
+                        '"keywords": up to 6 lowercase words a shop listing would use}. '
+                        f"Categories: {cats}")},
+                    {"type": "image_url", "image_url": {"url": data_url, "detail": "low"}},
+                ]}],
+            },
+            timeout=30,
+        )
+        res.raise_for_status()
+        out = json.loads(res.json()["choices"][0]["message"]["content"])
+        return out if isinstance(out, dict) else None
+    except (requests.RequestException, ValueError, KeyError, IndexError):
+        return None  # fall back to colour matching alone
+
+
+@app.post("/api/search/photo")
+def search_by_photo():
+    data = request.get_json(silent=True) or {}
+    image = data.get("image") or ""
+    limit = min(int(data.get("limit") or 24), 60)
+    if not image.startswith("data:image/"):
+        return jsonify({"error": "Send the photo as a data:image/... URL."}), 400
+    if len(image) > PHOTO_MAX_BYTES * 4 // 3:
+        return jsonify({"error": "That photo is too large. Try one under 8 MB."}), 413
+
+    try:
+        target = _fingerprint(_open_image(image))
+    except ImportError:
+        return jsonify({"error": "Photo search needs Pillow on the server (pip install -r requirements.txt)."}), 503
+    except Exception:
+        return jsonify({"error": "Couldn't read that photo. Try a JPG or PNG."}), 400
+
+    products = Product.query.order_by(Product.sort).all()
+    ai = _describe_photo(image, Category.query.order_by(Category.sort).all())
+    keywords = [str(k).lower() for k in (ai or {}).get("keywords", []) if str(k).strip()][:6]
+
+    scored = []
+    for p in products:
+        fp = _product_fingerprint(p)
+        colour = sum(min(a, b) for a, b in zip(target, fp)) if fp else 0.0
+        score = colour
+        if ai:
+            text = f"{p.name} {p.sub or ''} {p.desc}".lower()
+            score = colour * 0.4
+            score += 0.6 if ai.get("category") == p.cat_id else 0
+            score += min(0.6, 0.15 * sum(1 for k in keywords if k in text))
+        scored.append((score, p.sold or 0, p))
+    scored.sort(key=lambda t: (t[0], t[1]), reverse=True)
+
+    return jsonify({
+        "label": (ai or {}).get("label"),
+        "smart": ai is not None,
+        "products": [p.to_dict() for _, _, p in scored[:limit]],
+    })
 
 
 # ---------------------------------------------------------------------------

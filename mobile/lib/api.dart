@@ -16,7 +16,7 @@ class ApiException implements Exception {
 class Api {
   String? token;
 
-  Future<dynamic> request(String method, String path, {Object? body}) async {
+  Future<dynamic> request(String method, String path, {Object? body, Duration timeout = const Duration(seconds: 20)}) async {
     final headers = <String, String>{
       if (body != null) 'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
@@ -26,7 +26,7 @@ class Api {
 
     http.Response res;
     try {
-      res = await http.Response.fromStream(await req.send().timeout(const Duration(seconds: 20)));
+      res = await http.Response.fromStream(await req.send().timeout(timeout));
     } catch (_) {
       throw ApiException('Could not reach the server. Check your connection and try again.');
     }

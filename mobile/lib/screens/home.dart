@@ -8,10 +8,11 @@ import '../config.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'photo_search.dart';
 import 'shop.dart';
 
 class HomeScreen extends StatefulWidget {
-  /// Jumps the shell to another tab (Shop, Cart, Account).
+  /// Jumps the shell to another tab (0 Home, 1 Shop, 2 Exchange, 3 Cart, 4 Account).
   final ValueChanged<int> goToTab;
   const HomeScreen({super.key, required this.goToTab});
 
@@ -46,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
             actions: [
               IconButton(
                 tooltip: 'Account',
-                onPressed: () => widget.goToTab(3),
+                onPressed: () => widget.goToTab(4),
                 icon: u == null
                     ? const Icon(Icons.person_outline)
                     : CircleAvatar(radius: 15, backgroundColor: Brand.red, child: Text(u.firstName.isEmpty ? '?' : u.firstName[0].toUpperCase(), style: Brand.head(14, color: Colors.white))),
@@ -61,12 +62,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   onTap: () => openSearch(context),
                   child: Container(
                     height: 48,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.only(left: 16, right: 5),
                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(99), border: Border.all(color: Brand.line)),
-                    child: const Row(children: [
-                      Icon(Icons.search, color: Brand.muted, size: 21),
-                      SizedBox(width: 10),
-                      Expanded(child: Text('Search phones, cars, raw materials', style: TextStyle(color: Brand.muted))),
+                    child: Row(children: [
+                      const Icon(Icons.search, color: Brand.muted, size: 21),
+                      const SizedBox(width: 10),
+                      const Expanded(child: Text('Search phones, cars, raw materials', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Brand.muted))),
+                      const CameraSearchButton(),
                     ]),
                   ),
                 ),
@@ -86,7 +88,16 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             )
           else ...[
-            SliverToBoxAdapter(child: _HeroSlider(onShop: () => widget.goToTab(1))),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Text.rich(TextSpan(children: [
+                  TextSpan(text: u == null ? 'Welcome! ' : 'Hi, ${u.firstName}! ', style: Brand.head(20)),
+                  TextSpan(text: 'What are you buying today?', style: Brand.head(20, weight: FontWeight.w500, color: Brand.muted)),
+                ])),
+              ),
+            ),
+            SliverToBoxAdapter(child: _HeroSlider(goToTab: widget.goToTab)),
             const SliverToBoxAdapter(child: _Perks()),
             SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.fromLTRB(16, 18, 16, 0), child: _ModeCard(goToTab: widget.goToTab))),
             SliverToBoxAdapter(
@@ -129,6 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+            if (!s.isBusiness) SliverToBoxAdapter(child: _FlashDeals(products: s.products)),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
@@ -196,7 +208,8 @@ class _HomeScreenState extends State<HomeScreen> {
 class _Slide {
   final String eyebrow, title, accent, text, cta;
   final String? photo;
-  const _Slide({required this.eyebrow, required this.title, required this.accent, required this.text, required this.cta, this.photo});
+  final int tab; // which bottom tab the button opens
+  const _Slide({required this.eyebrow, required this.title, required this.accent, required this.text, required this.cta, this.photo, this.tab = 1});
 }
 
 final _slides = [
@@ -216,17 +229,19 @@ final _slides = [
     photo: 'assets/banners/ship.jpg',
   ),
   const _Slide(
-    eyebrow: 'Business buying',
-    title: 'Wholesale prices',
-    accent: 'from ${AppConfig.bulkMinQty} pieces.',
-    text: 'Up to 15% off in bulk, your own agent and your logo on the goods.',
-    cta: 'See products',
+    eyebrow: 'Exchange',
+    title: 'Naira to RMB and crypto,',
+    accent: 'in seconds.',
+    text: 'Change naira to yuan, USDT, Bitcoin and more at clear rates.',
+    cta: 'Exchange now',
+    photo: 'assets/banners/bitcoin.jpg',
+    tab: 2,
   ),
 ];
 
 class _HeroSlider extends StatefulWidget {
-  final VoidCallback onShop;
-  const _HeroSlider({required this.onShop});
+  final ValueChanged<int> goToTab;
+  const _HeroSlider({required this.goToTab});
 
   @override
   State<_HeroSlider> createState() => _HeroSliderState();
@@ -273,7 +288,7 @@ class _HeroSliderState extends State<_HeroSlider> {
             controller: _pages,
             itemCount: _slides.length,
             onPageChanged: (i) => setState(() => _index = i),
-            itemBuilder: (_, i) => Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: _SlideCard(slide: _slides[i], onTap: widget.onShop)),
+            itemBuilder: (_, i) => Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: _SlideCard(slide: _slides[i], onTap: () => widget.goToTab(_slides[i].tab))),
           ),
         ),
       ),
@@ -354,6 +369,91 @@ class _SlideCard extends StatelessWidget {
           ]),
         ),
       ]),
+    );
+  }
+}
+
+// ---------------------------------------------------------------- flash deals
+
+/// Biggest discounts, with a countdown to midnight when the deals change.
+class _FlashDeals extends StatefulWidget {
+  final List<Product> products;
+  const _FlashDeals({required this.products});
+
+  @override
+  State<_FlashDeals> createState() => _FlashDealsState();
+}
+
+class _FlashDealsState extends State<_FlashDeals> {
+  late Timer _tick;
+  Duration _left = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _update();
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) => _update());
+  }
+
+  void _update() {
+    final now = DateTime.now();
+    final midnight = DateTime(now.year, now.month, now.day + 1);
+    if (mounted) setState(() => _left = midnight.difference(now));
+  }
+
+  @override
+  void dispose() {
+    _tick.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final deals = widget.products.where((p) => p.discount >= 20 && p.stock > 0).toList()..sort((a, b) => b.discount.compareTo(a.discount));
+    if (deals.isEmpty) return const SizedBox.shrink();
+    String two(int n) => n.toString().padLeft(2, '0');
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFFFE3E7), Color(0xFFFFF6F7)]),
+          border: Border.all(color: const Color(0xFFFFD0D6)),
+        ),
+        padding: const EdgeInsets.fromLTRB(14, 14, 0, 14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 14),
+            child: Row(children: [
+              const Icon(Icons.bolt_rounded, color: Brand.red, size: 26),
+              const SizedBox(width: 2),
+              Text('Flash deals', style: Brand.head(20, weight: FontWeight.w800)),
+              const Spacer(),
+              const Text('Ends in ', style: TextStyle(color: Brand.muted, fontSize: 12)),
+              for (final (i, part) in [two(_left.inHours), two(_left.inMinutes % 60), two(_left.inSeconds % 60)].indexed) ...[
+                if (i > 0) const Text(' : ', style: TextStyle(color: Brand.red600, fontWeight: FontWeight.w800)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  decoration: BoxDecoration(color: Brand.ink, borderRadius: BorderRadius.circular(7)),
+                  child: Text(part, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12.5, fontFeatures: [FontFeature.tabularFigures()])),
+                ),
+              ],
+            ]),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 262,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 14),
+              itemCount: deals.length.clamp(0, 12),
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (_, i) => SizedBox(width: 160, child: ProductCard(product: deals[i], index: i, deal: true)),
+            ),
+          ),
+        ]),
+      ),
     );
   }
 }
@@ -443,7 +543,7 @@ class _ModeCard extends StatelessWidget {
           ),
           onPressed: () {
             if (u == null) showMessage(context, 'Sign in first, then switch to business');
-            goToTab(3);
+            goToTab(4);
           },
           child: Text(business ? 'Manage' : 'Switch'),
         ),

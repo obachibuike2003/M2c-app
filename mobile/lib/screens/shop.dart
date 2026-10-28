@@ -5,6 +5,7 @@ import '../app_state.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'photo_search.dart';
 
 /// "All categories", the long list the site links to from the home page.
 class CategoriesScreen extends StatelessWidget {
@@ -155,6 +156,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   fillColor: const Color(0xFFF0F1F4),
                   isDense: true,
                   prefixIcon: const Icon(Icons.search, size: 20),
+                  suffixIcon: const Padding(padding: EdgeInsets.all(4), child: CameraSearchButton()),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(99), borderSide: BorderSide.none),
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(99), borderSide: BorderSide.none),
                   focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(99), borderSide: const BorderSide(color: Brand.red, width: 1.5)),
