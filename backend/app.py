@@ -847,9 +847,12 @@ def get_recommendations():
 # ---------------------------------------------------------------------------
 
 @app.post("/api/design/generate")
+@login_required
 def generate_design():
     if not OPENAI_API_KEY:
-        return jsonify({"error": "OPENAI_API_KEY is not set on the backend. Add it to backend/.env and restart."}), 503
+        return jsonify({"error": "AI design isn't switched on yet. Try the colour variants or upload your own logo.", "code": "ai_off"}), 503
+    if not _allow(f"design:{current_user.id}", AI_DESIGNS_PER_HOUR):
+        return jsonify({"error": "That's a lot of designs for one hour. Try again a little later."}), 429
 
     data = request.get_json(silent=True) or {}
     prompt = (data.get("prompt") or "").strip()
@@ -919,6 +922,142 @@ def _shrink_logo(raw, size=512):
         return out.getvalue()
     except Exception:
         return raw  # no Pillow, or an odd file: send it as it came
+
+
+# ---------------------------------------------------------------------------
+# 7a. AI chat: the business assistant, customer care and brand ideas.
+# One endpoint, three "modes". The model gets the shop's rules, a compact
+# product list and (for the signed-in person) their account and recent
+# orders, and answers as JSON so the apps can show products and buttons.
+# Customer care hands over to a person (the buyer's agent, or support on
+# WhatsApp) when an issue needs one: refunds, damaged or missing goods,
+# payment problems, complaints, or anything it can't settle from what it
+# knows. Signed-in only and rate limited per person, because every message costs.
+# ---------------------------------------------------------------------------
+
+OPENAI_CHAT_MODEL = os.environ.get("OPENAI_CHAT_MODEL", "gpt-4o-mini")
+AI_MESSAGES_PER_HOUR = 40
+AI_DESIGNS_PER_HOUR = 10
+_rate = {}  # key -> recent request times
+
+
+def _allow(key, per_hour):
+    """Simple in-memory limit (there's one gunicorn worker): at most per_hour calls an hour."""
+    import time
+    cutoff = time.time() - 3600
+    recent = [t for t in _rate.get(key, []) if t > cutoff]
+    if len(recent) >= per_hour:
+        _rate[key] = recent
+        return False
+    recent.append(time.time())
+    _rate[key] = recent
+    return True
+
+
+def _shop_brief(user):
+    """What the model needs to know about the shop and this person."""
+    cats = {c.id: c.name for c in Category.query.all()}
+    products = Product.query.order_by(Product.sold.desc()).all()
+    lines = [f"{p.id}|{p.name}|{cats.get(p.cat_id, p.cat_id)}|N{p.price}|stock {p.stock}|min {p.bulk_min or BULK_MIN_QTY}"
+             for p in products]
+    tiers = ", ".join(f"{t['from']}+ pieces {t['off']}% off" for t in BULK_TIERS)
+    about = [
+        "Shop: Easy2buy, Nigeria. Goods bought from factories in China, priced in naira, delivered to the door.",
+        f"Delivery: N{SHIPPING_FEE} per order, free from N{FREE_SHIPPING_FROM}. Small goods arrive in 7-15 days, "
+        "bulk raw materials and furniture 20-40 days, cars 45-60 days. Every order can be tracked step by step.",
+        "Payment: pay on delivery in the app. Buyer protection: if goods don't arrive or don't match, the money goes back to the wallet.",
+        f"Business buyers: minimum {BULK_MIN_QTY} pieces per item (fewer for big items like cars), bulk discounts: {tiers}. "
+        "They get a personal agent, can put their own logo on most goods (not name brands or cars) with AiStudio, "
+        "and can build a brand kit (name, logo, colours, tagline) on Build my brand.",
+        "Wallet and Exchange: naira, yuan (RMB) and crypto balances; exchange at the rates shown, send out to Alipay, WeChat, banks or crypto wallets.",
+        "Products (id|name|category|retail price|stock|business minimum):",
+        *lines,
+    ]
+    if user:
+        profile = user.profile if isinstance(user.profile, dict) else {}
+        biz = profile.get("business") if isinstance(profile.get("business"), dict) else None
+        about.append(f"Customer: {user.name}, buying as {'a business' if user.mode == 'business' else 'a person'}"
+                     + (f", business '{biz.get('name')}' ({biz.get('type')})" if biz else "") + ".")
+        orders = Order.query.filter_by(user_id=user.id).order_by(Order.created_at.desc()).limit(5).all()
+        about.append("Their recent orders: " + "; ".join(f"{o.id} {o.status} N{o.total} ({len(o.items)} items)" for o in orders)
+                     if orders else "They have no orders yet.")
+    return "\n".join(about)
+
+
+_MODES = {
+    "business": (
+        "You are the Easy2buy business assistant for small Nigerian business owners. Help them choose stock, "
+        "work out bulk prices and profit (use the business discounts), price their goods, market on WhatsApp, "
+        "Instagram and TikTok, and build their brand. Be practical, warm and brief (under 120 words), in plain English. "
+        "Only quote prices from the product list. Suggest up to 4 product ids that fit."
+    ),
+    "support": (
+        "You are Easy2buy customer care. Answer questions about orders, delivery, payment, the wallet, exchange, "
+        "accounts and business buying, kindly and briefly (under 100 words). Use the customer's real orders when they ask "
+        "about an order. Set handoff to true, and say you're passing them to a person, when the issue needs a human: "
+        "refunds, damaged, wrong or missing goods, payment or wallet money problems, cancelling a paid order, complaints, "
+        "an upset customer, anything legal, or anything you can't answer from what you know. Never invent policies."
+    ),
+    "brand": (
+        "You help a Nigerian small business position its brand. Give fresh, short, memorable taglines "
+        "(at most 7 words each) that fit the business type and name. No hashtags or emojis."
+    ),
+}
+
+
+@app.post("/api/assistant/chat")
+@login_required
+def assistant_chat():
+    """{"mode": "business"|"support"|"brand", "messages": [{role, content}], "name"?}
+    -> {"reply", "products": [ids], "handoff": bool}, or for brand {"taglines": [...]}."""
+    if not OPENAI_API_KEY:
+        return jsonify({"error": "The AI assistant isn't switched on yet.", "code": "ai_off"}), 503
+    if not _allow(f"chat:{current_user.id}", AI_MESSAGES_PER_HOUR):
+        return jsonify({"error": "You've sent a lot of messages this hour. Try again later, or talk to us on WhatsApp."}), 429
+
+    data = request.get_json(silent=True) or {}
+    mode = data.get("mode") if data.get("mode") in _MODES else "business"
+    history = []
+    for m in (data.get("messages") or [])[-12:]:
+        if isinstance(m, dict) and m.get("role") in ("user", "assistant") and str(m.get("content") or "").strip():
+            history.append({"role": m["role"], "content": str(m["content"])[:1000]})
+
+    if mode == "brand":
+        profile = current_user.profile if isinstance(current_user.profile, dict) else {}
+        biz = profile.get("business") if isinstance(profile.get("business"), dict) else {}
+        name = str(data.get("name") or biz.get("name") or "my business")[:60]
+        kind = str(biz.get("type") or "general")[:40]
+        shape = 'Reply as JSON: {"taglines": [6 strings]}.'
+        history = [{"role": "user", "content": f"Business name: {name}. Type of business: {kind}. Give 6 taglines."}]
+    else:
+        if not history or history[-1]["role"] != "user":
+            return jsonify({"error": "Ask something first."}), 400
+        shape = ('Reply as JSON: {"reply": your answer, "products": [up to 4 product ids from the list, or []], '
+                 '"handoff": true or false}.')
+
+    system = f"{_MODES[mode]}\n{shape}\n\n{_shop_brief(current_user)}"
+    try:
+        res = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
+            json={"model": OPENAI_CHAT_MODEL, "response_format": {"type": "json_object"}, "max_tokens": 400,
+                  "temperature": 0.9 if mode == "brand" else 0.4,
+                  "messages": [{"role": "system", "content": system}, *history]},
+            timeout=45,
+        )
+        res.raise_for_status()
+        out = json.loads(res.json()["choices"][0]["message"]["content"])
+    except (requests.RequestException, ValueError, KeyError, IndexError):
+        return jsonify({"error": "The assistant couldn't answer just now. Try again, or talk to us on WhatsApp.", "code": "ai_failed"}), 502
+
+    if mode == "brand":
+        return jsonify({"taglines": [str(t).strip()[:70] for t in (out.get("taglines") or []) if str(t).strip()][:6]})
+    known = {pid for (pid,) in db.session.query(Product.id).all()}
+    return jsonify({
+        "reply": str(out.get("reply") or "").strip()[:2000] or "Sorry, I didn't catch that. Could you ask another way?",
+        "products": [pid for pid in (out.get("products") or []) if pid in known][:4],
+        "handoff": bool(out.get("handoff")) and mode == "support",
+    })
 
 
 # ---------------------------------------------------------------------------

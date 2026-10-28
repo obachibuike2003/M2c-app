@@ -42,7 +42,7 @@ mountChrome('business');
             <span class="thumb">${productThumb(p, 22)}</span>
             <span><b>${esc(p.name)}</b><small>${money(Store.unitPrice(p, Store.bulkMin(p)))} each · min. ${Store.bulkMin(p)}</small></span>
           </a>`).join('')}</div>` : ''}
-        ${(m.actions || []).length ? `<div class="row">${m.actions.map(([label, href]) => `<a class="btn btn-soft btn-sm" href="${esc(href)}">${esc(label)}</a>`).join('')}</div>` : ''}
+        ${(m.actions || []).length ? `<div class="row">${m.actions.map(([label, href]) => `<a class="btn btn-soft btn-sm" href="${esc(href)}"${/^https?:/.test(href) ? ' target="_blank" rel="noopener"' : ''}>${esc(label)}</a>`).join('')}</div>` : ''}
       </div>`;
   }
 

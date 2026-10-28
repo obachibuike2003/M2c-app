@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../api.dart';
 import '../app_state.dart';
 import '../media.dart';
 import '../theme.dart';
@@ -56,7 +57,24 @@ class _BrandScreenState extends State<BrandScreen> {
   final _pieces = TextEditingController(text: '50');
   String _logo = '', _c1 = '#e0182d', _c2 = '#111216';
   Map<String, dynamic> _steps = {};
-  bool _showIdeas = false, _saving = false;
+  bool _showIdeas = false, _saving = false, _thinking = false;
+
+  /// Fresh ideas from the AI (null until asked, or when it's off).
+  List<String>? _aiIdeas;
+
+  Future<void> _suggest() async {
+    setState(() { _showIdeas = true; _thinking = true; });
+    try {
+      final res = await context.read<AppState>().api.request('POST', '/api/assistant/chat',
+          body: {'mode': 'brand', 'name': _name.text.trim()}, timeout: const Duration(seconds: 40)) as Map<String, dynamic>;
+      final list = [for (final t in (res['taglines'] as List? ?? const [])) '$t'];
+      if (mounted && list.isNotEmpty) setState(() => _aiIdeas = list);
+    } on ApiException {
+      // AI off or busy: the built-in ideas below are shown instead.
+    } finally {
+      if (mounted) setState(() => _thinking = false);
+    }
+  }
   int _style = 0;
 
   @override
@@ -191,8 +209,10 @@ class _BrandScreenState extends State<BrandScreen> {
               const SizedBox(width: 8),
               FilledButton.tonalIcon(
                 style: FilledButton.styleFrom(backgroundColor: Brand.redSoft, foregroundColor: Brand.red600, minimumSize: const Size(0, 48)),
-                onPressed: () => setState(() => _showIdeas = true),
-                icon: const Icon(Icons.auto_fix_high, size: 18),
+                onPressed: _thinking ? null : _suggest,
+                icon: _thinking
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Brand.red600))
+                    : const Icon(Icons.auto_fix_high, size: 18),
                 label: const Text('Suggest'),
               ),
             ]),
@@ -200,7 +220,7 @@ class _BrandScreenState extends State<BrandScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 10),
                 child: Wrap(spacing: 8, runSpacing: 8, children: [
-                  for (final t in ideas) ActionChip(label: Text(t), onPressed: () => setState(() => _tagline.text = t)),
+                  for (final t in _aiIdeas ?? ideas) ActionChip(label: Text(t), onPressed: () => setState(() => _tagline.text = t)),
                 ]),
               ),
             const SizedBox(height: 18),

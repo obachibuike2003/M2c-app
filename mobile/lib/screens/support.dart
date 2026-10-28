@@ -26,6 +26,43 @@ class SupportScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Customer service')),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 32), children: [
         const Text('Questions about an order, your wallet or your account? Here\'s every way to reach us.', style: TextStyle(color: Brand.muted, height: 1.45)),
+        const SizedBox(height: 14),
+        // Customer care chat: answers straight away, and hands anything serious to a person.
+        Semantics(
+          button: true,
+          label: 'Chat with customer care',
+          excludeSemantics: true,
+          child: Pressable(
+          onTap: () => u == null
+              ? showMessage(context, 'Sign in to chat with customer care, or WhatsApp us below.')
+              : push(const AssistantScreen(support: true)),
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(Brand.radius),
+              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFFF3A50), Brand.red, Brand.red700]),
+              boxShadow: const [BoxShadow(color: Color(0x33E0182D), blurRadius: 22, offset: Offset(0, 10))],
+            ),
+            child: Row(children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(14)),
+                child: const Icon(Icons.support_agent, color: Colors.white, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Chat with customer care', style: Brand.head(17, color: Colors.white)),
+                  const SizedBox(height: 2),
+                  Text('Answers in seconds. A person takes over when you need one.', style: TextStyle(color: Colors.white.withValues(alpha: 0.88), fontSize: 13)),
+                ]),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.white),
+            ]),
+          ),
+        ),
+        ),
         if (agent != null) ...[
           const SizedBox(height: 14),
           CardBox(

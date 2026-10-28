@@ -185,17 +185,21 @@ class AppState extends ChangeNotifier {
   Future<void> _saveCart() => _prefs.setString('cart', jsonEncode(cart.map((l) => l.toJson()).toList()));
 
   /// Adds to the cart; returns an error message, or null if it worked.
-  /// [custom] is an AiStudio design; it replaces any design already on that line.
+  /// With [custom] (an AiStudio design) the line is set to exactly [qty]
+  /// customised pieces, since the design was made for that many.
   String? addToCart(Product p, int qty, {Map<String, dynamic>? custom}) {
     if (p.stock < 1) return 'This item is out of stock.';
     final i = cart.indexWhere((l) => l.productId == p.id);
-    final inCart = i == -1 ? 0 : cart[i].qty;
+    final inCart = i == -1 || custom != null ? 0 : cart[i].qty;
     if (inCart + qty > p.stock) return 'Only ${p.stock} left in stock.';
     if (i == -1) {
       cart.add(CartLine(p.id, qty, custom: custom));
+    } else if (custom != null) {
+      cart[i]
+        ..qty = qty
+        ..custom = custom;
     } else {
       cart[i].qty += qty;
-      if (custom != null) cart[i].custom = custom;
     }
     _saveCart();
     notifyListeners();

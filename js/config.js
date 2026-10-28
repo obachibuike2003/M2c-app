@@ -23,16 +23,8 @@ const SEED_BULK = {
 // each page loads them from it before rendering.
 const API_BASE = 'https://m2c.13-48-31-7.sslip.io';
 
-// Optional: the web address of your own AI service. While it is empty, the business
-// assistant answers from the product catalogue and built-in tips. When set, the assistant
-// POSTs { messages, user } to it and shows the "reply" text it returns. Keep any AI API key
-// on that server, never in this file.
-const ASSISTANT_ENDPOINT = '';
-
-// Optional: the web address of the backend's image-generation route (see
-// backend/app.py, POST /api/design/generate). While it is empty, AiStudio's
-// "Generate" button just explains that AI generation isn't connected yet.
-// When set, it POSTs { prompt } and expects either { image: "data:..." } or
-// { error: "..." } back. Run the Flask backend locally and point this at it,
-// e.g. 'http://127.0.0.1:5000/api/design/generate'.
-const AI_DESIGN_ENDPOINT = '';
+// AI features run on the backend, which keeps the OpenAI key: the business
+// assistant and customer care (POST /api/assistant/chat) and AiStudio's
+// "Generate" (POST /api/design/generate). They need a signed-in account; if
+// the backend has no key, the assistant falls back to its built-in answers.
+const AI_DESIGN_ENDPOINT = '/api/design/generate';

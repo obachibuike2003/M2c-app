@@ -6,7 +6,11 @@ import 'config.dart';
 
 class ApiException implements Exception {
   final String message;
-  ApiException(this.message);
+
+  /// The server's machine-readable reason, e.g. "ai_off", when it sends one.
+  final String? code;
+  final int? status;
+  ApiException(this.message, {this.code, this.status});
   @override
   String toString() => message;
 }
@@ -38,7 +42,7 @@ class Api {
     }
     if (res.statusCode >= 400) {
       final msg = data is Map && data['error'] is String ? data['error'] as String : 'The server said no (${res.statusCode}).';
-      throw ApiException(msg);
+      throw ApiException(msg, code: data is Map ? data['code'] as String? : null, status: res.statusCode);
     }
     return data;
   }

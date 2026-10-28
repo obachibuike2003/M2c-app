@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../api.dart';
 import '../app_state.dart';
 import '../config.dart';
+import '../media.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -13,8 +15,8 @@ import 'orders.dart';
 import 'product.dart';
 import 'shop.dart';
 
-/// Where an answer's buttons lead.
-enum _Go { brand, agent, orders, products, used, exchange }
+/// Where an answer's buttons lead. `human` opens WhatsApp with a real person.
+enum _Go { brand, agent, orders, products, used, exchange, human }
 
 class _Msg {
   final bool me;
@@ -24,17 +26,24 @@ class _Msg {
   const _Msg(this.me, this.text, {this.products = const [], this.actions = const []});
 }
 
-/// The business assistant, the website's assistant.html. It answers from the
-/// catalogue, the buyer's orders and built-in business tips (js/assistant.js).
+/// The business assistant (the website's assistant.html), or customer care
+/// with [support]. Answers come from OpenAI through the backend when it's
+/// switched on, and from the built-in answers (js/assistant.js) otherwise.
+/// Customer care hands complex issues to a person on WhatsApp.
 class AssistantScreen extends StatefulWidget {
-  const AssistantScreen({super.key});
+  final bool support;
+  const AssistantScreen({super.key, this.support = false});
 
   @override
   State<AssistantScreen> createState() => _AssistantScreenState();
 }
 
 class _AssistantScreenState extends State<AssistantScreen> {
-  static const _suggestions = ['What should I stock first?', 'How much for 50 power banks?', 'How do I price my goods?', 'Where is my order?', 'Ideas to get more customers', 'Find caustic soda'];
+  static const _businessSuggestions = ['What should I stock first?', 'How much for 50 power banks?', 'How do I price my goods?', 'Where is my order?', 'Ideas to get more customers', 'Find caustic soda'];
+  static const _supportSuggestions = ['Where is my order?', 'How long does delivery take?', 'How does pay on delivery work?', 'My item arrived damaged', 'How do I switch to business buying?'];
+
+  /// Set once the server says AI is off, so we stop asking it.
+  bool _aiOff = false;
 
   final _input = TextEditingController();
   final _scroll = ScrollController();
@@ -78,8 +87,47 @@ class _AssistantScreenState extends State<AssistantScreen> {
       _Go.products => const ProductListScreen(),
       _Go.used => const ProductListScreen(condition: 'used'),
       _Go.exchange => const ExchangeScreen(),
+      _Go.human => const SizedBox(),
     };
+    if (where == _Go.human) return _talkToPerson();
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+  }
+
+  /// WhatsApp a real person: a business buyer's own agent, or Easy2buy support.
+  void _talkToPerson() {
+    final s = context.read<AppState>();
+    final u = s.user;
+    final agent = s.isBusiness ? AppConfig.agents.where((a) => a.id == u?.raw['agentId']).firstOrNull : null;
+    // Hand over what was said, so they don't have to start again.
+    final asked = _history.where((m) => m.me).map((m) => m.text).toList();
+    final summary = asked.isEmpty ? '' : ' I asked: "${asked.last}"';
+    final who = u == null ? '' : ' This is ${u.name}${u.business?['name'] != null ? ' (${u.business!['name']})' : ''}.';
+    final link = agent != null
+        ? whatsappLink(agent.whatsapp, 'Hi ${agent.name},$who$summary')
+        : whatsappLink(supportWhatsappDigits, 'Hi ${AppConfig.appName},$who$summary');
+    openLink(context, link);
+  }
+
+  /// OpenAI through the backend. Null means "use the built-in answers".
+  Future<_Msg?> _aiReply() async {
+    final s = context.read<AppState>();
+    if (_aiOff || s.user == null) return null;
+    final messages = [
+      for (final m in _history) {'role': m.me ? 'user' : 'assistant', 'content': m.text},
+    ];
+    try {
+      final res = await s.api.request('POST', '/api/assistant/chat',
+          body: {'mode': widget.support ? 'support' : 'business', 'messages': messages}, timeout: const Duration(seconds: 50)) as Map<String, dynamic>;
+      final products = [for (final id in (res['products'] as List? ?? const [])) ?s.product('$id')];
+      final handoff = res['handoff'] == true;
+      return _Msg(false, '${res['reply']}', products: products, actions: [if (handoff) ('Talk to a person', _Go.human)]);
+    } on ApiException catch (e) {
+      if (e.code == 'ai_off' || e.status == 401) {
+        _aiOff = true;
+        return null;
+      }
+      return _Msg(false, e.message, actions: const [('Talk to a person', _Go.human)]);
+    }
   }
 
   // ---------------------------------------------------------------- the brain
@@ -108,6 +156,34 @@ class _AssistantScreenState extends State<AssistantScreen> {
   }
 
   Future<_Msg> _reply(String raw) async {
+    final ai = await _aiReply();
+    if (ai != null) return ai;
+    if (!mounted) return const _Msg(false, '');
+    return widget.support ? _supportReply(raw) : _localReply(raw);
+  }
+
+  /// Built-in customer care when AI is off: simple answers, and a person for anything serious.
+  Future<_Msg> _supportReply(String raw) async {
+    final text = raw.toLowerCase();
+    const human = [('Talk to a person', _Go.human)];
+    if (_has(text, ['refund', 'damaged', 'broken', 'missing', 'wrong item', 'not what i ordered', 'complain', 'cancel', 'scam', 'money', 'charged', 'paid twice'])) {
+      return const _Msg(false, 'Sorry about that. This needs one of our team, so I\'m passing you to a person. Tap below and send your order number.', actions: human);
+    }
+    if (_has(text, ['delivery', 'how long', 'arrive', 'shipping'])) {
+      return _Msg(false, 'Small goods usually arrive in 7 to 15 days, bulk raw materials and furniture in 20 to 40 days, and cars in 45 to 60 days. Delivery is free from ${money(AppConfig.freeShippingFrom)}.',
+          actions: const [('Track my orders', _Go.orders)]);
+    }
+    if (_has(text, ['pay on delivery', 'payment', 'pay'])) {
+      return const _Msg(false, 'You pay when your goods arrive. Every order has buyer protection: if it doesn\'t arrive or doesn\'t match, the money goes back to your wallet.');
+    }
+    if (_has(text, ['business', 'wholesale', 'bulk'])) {
+      return _Msg(false, 'Tap Business at the top of Home. You\'ll get wholesale prices from ${AppConfig.bulkMinQty} pieces, your own agent and your logo on the goods. It\'s free.');
+    }
+    if (_has(text, ['my order', 'track', 'where is', 'status'])) return _localReply(raw);
+    return const _Msg(false, 'I can help with orders, delivery, payment and your account. For anything else, a person on our team will sort it out.', actions: human);
+  }
+
+  Future<_Msg> _localReply(String raw) async {
     final s = context.read<AppState>();
     final text = raw.toLowerCase().trim();
     final first = s.user?.firstName ?? 'there';
@@ -231,8 +307,13 @@ class _AssistantScreenState extends State<AssistantScreen> {
   Widget build(BuildContext context) {
     final s = context.watch<AppState>();
     final bizName = s.user?.business?['name'] ?? 'your business';
-    final intro = _Msg(false,
-        'Hi ${s.user?.firstName ?? 'there'}! I\'m your ${AppConfig.appName} business assistant. Ask me to find products, work out bulk prices and profit, check your orders, or for tips on pricing, marketing and branding.');
+    final first = s.user?.firstName ?? 'there';
+    final intro = widget.support
+        ? _Msg(false, 'Hi $first! I\'m ${AppConfig.appName} customer care. Ask me about an order, delivery, payment or your account. If it needs a person, I\'ll pass you to one.',
+            actions: const [('Talk to a person', _Go.human)])
+        : _Msg(false,
+            'Hi $first! I\'m your ${AppConfig.appName} business assistant. Ask me to find products, work out bulk prices and profit, check your orders, or for tips on pricing, marketing and branding.');
+    final suggestions = widget.support ? _supportSuggestions : _businessSuggestions;
     final all = [intro, ..._history];
 
     return Scaffold(
@@ -243,13 +324,14 @@ class _AssistantScreenState extends State<AssistantScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(color: Brand.redSoft, borderRadius: BorderRadius.circular(12)),
-            child: const Icon(Icons.smart_toy_outlined, color: Brand.red600),
+            child: Icon(widget.support ? Icons.support_agent : Icons.smart_toy_outlined, color: Brand.red600),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Business assistant'),
-              Text('Helps $bizName find products, price orders and grow.', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Brand.muted, fontSize: 12, fontWeight: FontWeight.w400)),
+              Text(widget.support ? 'Customer care' : 'Business assistant'),
+              Text(widget.support ? 'Answers in seconds, a person when you need one.' : 'Helps $bizName find products, price orders and grow.',
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Brand.muted, fontSize: 12, fontWeight: FontWeight.w400)),
             ]),
           ),
         ]),
@@ -266,7 +348,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
         SizedBox(
           height: 46,
           child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), children: [
-            for (final q in _suggestions)
+            for (final q in suggestions)
               Padding(padding: const EdgeInsets.only(right: 8), child: ActionChip(label: Text(q), onPressed: () => _ask(q))),
           ]),
         ),
@@ -281,7 +363,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                   maxLength: 500,
                   textInputAction: TextInputAction.send,
                   onSubmitted: _ask,
-                  decoration: const InputDecoration(hintText: 'Ask anything about your business', counterText: '', isDense: true),
+                  decoration: InputDecoration(hintText: widget.support ? 'How can we help?' : 'Ask anything about your business', counterText: '', isDense: true),
                 ),
               ),
               const SizedBox(width: 8),

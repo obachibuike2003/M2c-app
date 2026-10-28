@@ -237,13 +237,8 @@ Store.ready.then(() => {
     showError(czError, '');
 
     try {
-      const res = await fetch(AI_DESIGN_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, productName: p.name })
-      });
-      const data = await res.json();
-      if (!res.ok || !data.image) throw new Error(data.error || 'Could not generate that design.');
+      const data = await Store.api('POST', AI_DESIGN_ENDPOINT, { prompt, productName: p.name });
+      if (!data || !data.image) throw new Error('Could not generate that design.');
 
       design.logo = data.image;
       logoImg.src = design.logo;

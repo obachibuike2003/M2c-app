@@ -7,7 +7,9 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'auth.dart';
 import 'orders.dart';
+import '../media.dart';
 import 'product.dart';
+import 'studio.dart';
 
 class CartScreen extends StatelessWidget {
   /// True when shown as a tab of the main shell (no back button).
@@ -74,6 +76,22 @@ class CartScreen extends StatelessWidget {
                                   ),
                                 ]),
                               ),
+                            if (s.isBusiness && l.custom == null && isCustomizable(l.product))
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Pressable(
+                                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => StudioScreen(productId: l.product.id))),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(color: Brand.blueSoft, borderRadius: BorderRadius.circular(99)),
+                                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                                      Icon(Icons.brush_outlined, size: 15, color: Brand.blue),
+                                      SizedBox(width: 5),
+                                      Text('Add your logo', style: TextStyle(color: Brand.blue, fontSize: 12.5, fontWeight: FontWeight.w700)),
+                                    ]),
+                                  ),
+                                ),
+                              ),
                             if (l.short)
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),
@@ -135,6 +153,43 @@ class CartScreen extends StatelessWidget {
     if (s.user == null) {
       final ok = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const LoginScreen(reason: 'Sign in to place your order')));
       if (ok != true || !context.mounted) return;
+    }
+    // Business buyers: offer their logo on the goods before they pay.
+    final plain = s.isBusiness ? s.cartLines.where((l) => l.custom == null && isCustomizable(l.product)).toList() : const [];
+    if (plain.isNotEmpty) {
+      final choice = await showModalBottomSheet<String>(
+        context: context,
+        showDragHandle: true,
+        backgroundColor: Colors.white,
+        sheetAnimationStyle: AnimationStyle(curve: easeDrawer, duration: const Duration(milliseconds: 340), reverseDuration: const Duration(milliseconds: 200)),
+        builder: (sheet) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Text('Add your logo first?', style: Brand.head(22)),
+              const SizedBox(height: 6),
+              Text(
+                '${plain.length == 1 ? plain.first.product.name : '${plain.length} items in your cart'} can carry your brand. '
+                'The factory prints it before shipping.',
+                style: const TextStyle(color: Brand.muted, height: 1.45),
+              ),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(sheet, 'brand'),
+                icon: const Icon(Icons.brush_outlined, size: 19),
+                label: Text(plain.length == 1 ? 'Customise with my logo' : 'Customise ${plain.first.product.name}'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton(onPressed: () => Navigator.pop(sheet, 'skip'), child: const Text('Continue without')),
+            ]),
+          ),
+        ),
+      );
+      if (!context.mounted || choice == null) return;
+      if (choice == 'brand') {
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => StudioScreen(productId: plain.first.product.id)));
+        return;
+      }
     }
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CheckoutScreen()));
   }

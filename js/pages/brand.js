@@ -153,12 +153,18 @@ mountChrome('business');
     return c.toDataURL('image/png');
   }
 
-  function ideas() {
-    const list = TAGLINES[typeId] || TAGLINES.other;
-    $('#tag-ideas').innerHTML = list.map((t) => {
-      const text = t.replace('{name}', brand.name || 'us');
-      return `<button type="button" class="chip" data-tag="${esc(text)}">${esc(text)}</button>`;
-    }).join('');
+  function ideas(fromAi) {
+    const list = fromAi || (TAGLINES[typeId] || TAGLINES.other).map((t) => t.replace('{name}', brand.name || 'us'));
+    $('#tag-ideas').innerHTML = list.map((text) => `<button type="button" class="chip" data-tag="${esc(text)}">${esc(text)}</button>`).join('');
+  }
+
+  // "Suggest" asks the AI for fresh ideas; the built-in ones stay if it's off.
+  async function suggest() {
+    const btn = $('#suggest-tag');
+    btn.disabled = true;
+    const fresh = await Assistant.taglines(brand.name);
+    btn.disabled = false;
+    ideas(fresh);
   }
 
   form.addEventListener('input', (e) => {
@@ -176,7 +182,7 @@ mountChrome('business');
       preview();
     }
   });
-  $('#suggest-tag').addEventListener('click', ideas);
+  $('#suggest-tag').addEventListener('click', suggest);
   $('#make-logo').addEventListener('click', () => { brand.logo = makeLogo(); preview(); });
   form.elements.logoFile.addEventListener('change', async (e) => {
     try {
@@ -221,7 +227,7 @@ mountChrome('business');
   calc.addEventListener('input', runCalc);
   runCalc();
 
-  ideas();
+  ideas(null);
   preview();
 })();
 

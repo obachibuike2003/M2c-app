@@ -54,7 +54,12 @@ const Store = (() => {
     }
     let data = null;
     try { data = await res.json(); } catch (e) { /* empty body */ }
-    if (!res.ok) throw new Error((data && data.error) || `The server said no (${res.status}).`);
+    if (!res.ok) {
+      const err = new Error((data && data.error) || `The server said no (${res.status}).`);
+      err.status = res.status;
+      err.code = data && data.code; // e.g. "ai_off" when the AI isn't switched on
+      throw err;
+    }
     return data;
   }
 
@@ -735,7 +740,7 @@ const Store = (() => {
   const ready = load();
 
   return {
-    ready, flush,
+    ready, flush, api,
     resetDemo, flag, setFlag, users, currentUser, signup, login, logout, updateUser,
     mode, isBusiness, setMode, businessType, submitVerification, setVerification, saveBrand,
     toggleFav, isFav, reviews, addReview,

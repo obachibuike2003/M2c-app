@@ -1,7 +1,7 @@
-// The business assistant's brain.
-// With no ASSISTANT_ENDPOINT set (see config.js) it answers from the product catalogue,
-// the user's orders and built-in business tips. Point ASSISTANT_ENDPOINT at your own
-// server to use a real AI model instead; this file then only forwards the conversation.
+// The business assistant's and customer care's brain.
+// Signed-in people get answers from OpenAI through the backend (POST /api/assistant/chat).
+// If the backend has no AI key, it answers from the product catalogue, the user's orders and
+// built-in tips. Customer care hands anything serious to a person on WhatsApp.
 
 const Assistant = (() => {
   const STOP = new Set('a an the i me my we our you your for of to in on and or is are be can do does how what which where who want need looking find show get buy sell some any with please pls abeg about have has it this that there their them from at by per pieces piece pcs units unit much many cost price prices'.split(' '));
@@ -138,21 +138,62 @@ const Assistant = (() => {
     };
   }
 
-  async function reply(text, history) {
-    if (ASSISTANT_ENDPOINT) {
-      try {
-        const user = Store.currentUser();
-        const res = await fetch(ASSISTANT_ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: [...history, { role: 'user', content: text }], user: { name: user.name, business: user.business } })
-        });
-        const data = await res.json();
-        if (data && data.reply) return { text: String(data.reply) };
-      } catch (e) { /* fall back to the built-in answers */ }
-    }
-    return localReply(text);
+  // A real person on WhatsApp: a business buyer's own agent, or Easy2buy support.
+  function humanLink(lastQuestion) {
+    const user = Store.currentUser();
+    const a = user && user.mode === 'business' && user.agentId ? Store.agent(user.agentId) : null;
+    const who = user ? ` This is ${user.name}${user.business ? ` (${user.business.name})` : ''}.` : '';
+    const asked = lastQuestion ? ` I asked: "${lastQuestion}"` : '';
+    return a ? waLink(a.whatsapp, `Hi ${a.name},${who}${asked}`) : waLink(APP.supportWhatsapp, `Hi ${APP.name},${who}${asked}`);
   }
 
-  return { reply };
+  function supportReply(raw, lastQuestion) {
+    const text = String(raw).toLowerCase();
+    const human = [['Talk to a person', humanLink(lastQuestion)]];
+    if (has(text, ['refund', 'damaged', 'broken', 'missing', 'wrong item', 'not what i ordered', 'complain', 'cancel', 'scam', 'money', 'charged', 'paid twice'])) {
+      return { text: "Sorry about that. This needs one of our team, so I'm passing you to a person. Tap below and send your order number.", actions: human };
+    }
+    if (has(text, ['delivery', 'how long', 'arrive', 'shipping'])) {
+      return { text: `Small goods usually arrive in 7 to 15 days, bulk raw materials and furniture in 20 to 40 days, and cars in 45 to 60 days. Delivery is free from ${money(APP.freeShippingFrom)}.`, actions: [['Track my orders', 'orders.html']] };
+    }
+    if (has(text, ['business', 'wholesale', 'bulk'])) {
+      return { text: `Choose Business at the top of the page. You get wholesale prices from ${Store.bulk().minQty} pieces, your own agent and your logo on the goods. It's free.` };
+    }
+    if (has(text, ['my order', 'track', 'where is', 'status'])) return localReply(raw);
+    return { text: 'I can help with orders, delivery, payment and your account. For anything else, a person on our team will sort it out.', actions: human };
+  }
+
+  let aiOff = false;
+
+  // mode: 'business' (the assistant page) or 'support' (customer care).
+  async function reply(text, history, mode = 'business') {
+    if (!aiOff && Store.currentUser()) {
+      try {
+        const data = await Store.api('POST', '/api/assistant/chat', { mode, messages: [...history, { role: 'user', content: text }] });
+        return {
+          text: String(data.reply || ''),
+          products: data.products || [],
+          actions: data.handoff ? [['Talk to a person', humanLink(text)]] : []
+        };
+      } catch (e) {
+        if (e.code === 'ai_off' || e.status === 401) aiOff = true; // use the built-in answers from now on
+        else return { text: e.message, actions: [['Talk to a person', humanLink(text)]] };
+      }
+    }
+    return mode === 'support' ? supportReply(text, text) : localReply(text);
+  }
+
+  // Fresh tagline ideas from the AI, or null when it's off.
+  async function taglines(name) {
+    if (aiOff || !Store.currentUser()) return null;
+    try {
+      const data = await Store.api('POST', '/api/assistant/chat', { mode: 'brand', name });
+      return (data.taglines || []).length ? data.taglines : null;
+    } catch (e) {
+      if (e.code === 'ai_off') aiOff = true;
+      return null;
+    }
+  }
+
+  return { reply, taglines };
 })();
