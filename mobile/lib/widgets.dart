@@ -6,7 +6,9 @@ import 'package:provider/provider.dart';
 import 'app_state.dart';
 import 'config.dart';
 import 'models.dart';
+import 'media.dart';
 import 'screens/product.dart';
+import 'screens/studio.dart';
 import 'theme.dart';
 
 // ---------------------------------------------------------------- motion
@@ -268,6 +270,18 @@ class ProductCard extends StatelessWidget {
                 if (p.used) Positioned(left: 8, bottom: 8, child: _badge('Used', const Color(0xFFFFF1D6), const Color(0xFF8F4D00))),
                 if (!s.isBusiness && p.discount > 0)
                   Positioned(left: 6, top: 6, child: _badge('-${p.discount}%', Brand.red, Colors.white)),
+                // Business buyers: put your logo on it (AiStudio), like the website's red "+".
+                if (s.isBusiness && isCustomizable(p) && !out)
+                  Positioned(
+                    top: 6,
+                    right: 46,
+                    child: _RoundIconButton(
+                      icon: Icons.add,
+                      color: Brand.red700,
+                      label: 'Customise ${p.name} with your logo',
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => StudioScreen(productId: p.id))),
+                    ),
+                  ),
                 Positioned(
                   top: 6,
                   right: 6,
@@ -368,11 +382,15 @@ class _RoundIconButton extends StatelessWidget {
   final IconData icon;
   final Color? color;
   final bool dark;
+  final String? label;
   final VoidCallback? onTap;
-  const _RoundIconButton({required this.icon, this.color, this.dark = false, this.onTap});
+  const _RoundIconButton({required this.icon, this.color, this.dark = false, this.label, this.onTap});
 
   @override
-  Widget build(BuildContext context) => Pressable(
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: label,
+        child: Pressable(
         onTap: onTap,
         scale: 0.9,
         child: Container(
@@ -385,6 +403,7 @@ class _RoundIconButton extends StatelessWidget {
           ),
           child: Icon(icon, size: 19, color: dark ? Colors.white : color),
         ),
+      ),
       );
 }
 
