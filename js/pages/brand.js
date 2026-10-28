@@ -76,6 +76,12 @@ mountChrome('business');
           </div>
           <small class="hint">No logo yet? "Make one for me" creates a simple one from your name and colours. Tap again for a different style.</small>
         </div>
+        <div class="field ai-logo">
+          <span>${icon('wand', 16)} Generate a logo with AI</span>
+          <textarea name="logoIdea" rows="2" maxlength="200" placeholder="Say what you want, e.g. A shopping bag with a crown, bold and modern"></textarea>
+          <button type="button" class="btn btn-primary btn-sm mt-12" id="ai-logo">${icon('wand', 16)} Generate logo</button>
+          <small class="hint">The AI draws it in your brand name and colours, and it's saved straight away. Takes about 15 seconds.</small>
+        </div>
         <p class="form-error" role="alert" hidden></p>
         <button class="btn btn-primary" type="submit">Save brand kit</button>
       </form>
@@ -184,6 +190,31 @@ mountChrome('business');
   });
   $('#suggest-tag').addEventListener('click', suggest);
   $('#make-logo').addEventListener('click', () => { brand.logo = makeLogo(); preview(); });
+
+  // A real logo from the AI (OpenAI through the backend), saved at once so a paid-for design isn't lost.
+  $('#ai-logo').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    if (!brand.name.trim()) return showError(error, 'Enter your brand name first.');
+    const idea = form.elements.logoIdea.value.trim();
+    const prompt = `A logo for a Nigerian business called "${brand.name.trim()}". Main colour ${brand.c1}, second colour ${brand.c2}. ${idea || 'Modern, simple and memorable, works small on packaging.'}`;
+    const label = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `${icon('wand', 16)} Drawing your logo…`;
+    showError(error, '');
+    try {
+      const data = await Store.api('POST', AI_DESIGN_ENDPOINT, { prompt, productName: brand.name.trim() });
+      brand.logo = data.image;
+      preview();
+      Store.saveBrand({ logo: brand.logo });
+      toast('Your new logo is ready and saved. Generate again for another idea.');
+      btn.innerHTML = `${icon('wand', 16)} Generate another`;
+    } catch (err) {
+      showError(error, err.message);
+      btn.innerHTML = label;
+    } finally {
+      btn.disabled = false;
+    }
+  });
   form.elements.logoFile.addEventListener('change', async (e) => {
     try {
       brand.logo = await readImage(e.target.files[0], 320, 'image/png');

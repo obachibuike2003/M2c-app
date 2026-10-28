@@ -52,6 +52,8 @@ class _BrandScreenState extends State<BrandScreen> {
   static const _swatches = ['#e0182d', '#f97316', '#f5a50b', '#0b7a43', '#0f766e', '#1d4ed8', '#8b5cf6', '#ec4899', '#111216', '#ffffff', '#ffc83d', '#d4af37'];
 
   late final TextEditingController _name, _tagline;
+  final _logoIdea = TextEditingController();
+  bool _generating = false;
   final _cost = TextEditingController(text: '5000');
   final _markup = TextEditingController(text: '40');
   final _pieces = TextEditingController(text: '50');
@@ -92,7 +94,7 @@ class _BrandScreenState extends State<BrandScreen> {
 
   @override
   void dispose() {
-    for (final c in [_name, _tagline, _cost, _markup, _pieces]) {
+    for (final c in [_name, _tagline, _logoIdea, _cost, _markup, _pieces]) {
       c.dispose();
     }
     super.dispose();
@@ -131,6 +133,31 @@ class _BrandScreenState extends State<BrandScreen> {
     final png = await img.toByteData(format: ui.ImageByteFormat.png);
     _style++;
     if (png != null && mounted) setState(() => _logo = 'data:image/png;base64,${base64Encode(png.buffer.asUint8List())}');
+  }
+
+  /// A real logo from the AI (OpenAI through the backend), using the brand
+  /// name, colours and the person's own description. Saved straight away, so
+  /// a paid-for design is never lost if they leave without tapping Save.
+  Future<void> _generateLogo() async {
+    final name = _name.text.trim();
+    if (name.isEmpty) return showMessage(context, 'Enter your brand name first.', error: true);
+    final idea = _logoIdea.text.trim();
+    final prompt = 'A logo for a Nigerian business called "$name". Main colour $_c1, second colour $_c2. '
+        '${idea.isEmpty ? 'Modern, simple and memorable, works small on packaging.' : idea}';
+    setState(() => _generating = true);
+    final s = context.read<AppState>();
+    try {
+      final res = await s.api.request('POST', '/api/design/generate', body: {'prompt': prompt, 'productName': name}, timeout: const Duration(seconds: 120)) as Map<String, dynamic>;
+      final img = res['image'] as String;
+      if (!mounted) return;
+      setState(() => _logo = img);
+      await s.saveBrand({'logo': img}).catchError((_) {});
+      if (mounted) showMessage(context, 'Your new logo is ready and saved. Tap Generate again for another idea.');
+    } on ApiException catch (e) {
+      if (mounted) showMessage(context, e.message, error: true);
+    } finally {
+      if (mounted) setState(() => _generating = false);
+    }
   }
 
   Future<void> _save() async {
@@ -275,6 +302,61 @@ class _BrandScreenState extends State<BrandScreen> {
             const SizedBox(height: 6),
             const Text('No logo yet? "Make one for me" creates a simple one from your name and colours. Tap again for a different style.',
                 style: TextStyle(color: Brand.muted, fontSize: 12.5)),
+            const SizedBox(height: 14),
+            // AI logo: describe it, the AI draws it in your name and colours.
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFFFF1F3), Color(0xFFF3F5FF)]),
+                border: Border.all(color: const Color(0xFFF6D5DA)),
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Row(children: [
+                  const Icon(Icons.auto_awesome, color: Brand.red600, size: 20),
+                  const SizedBox(width: 8),
+                  Text('Generate a logo with AI', style: Brand.head(16)),
+                ]),
+                const SizedBox(height: 4),
+                const Text('Say what you want and the AI draws it in your brand name and colours.', style: TextStyle(color: Brand.muted, fontSize: 12.5)),
+                const SizedBox(height: 10),
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  if (_logo.isNotEmpty) ...[
+                    Container(
+                      width: 64,
+                      height: 64,
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Brand.line)),
+                      child: NetImage(_logo, placeholder: const SizedBox()),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  Expanded(
+                    child: TextField(
+                      controller: _logoIdea,
+                      minLines: 2,
+                      maxLines: 3,
+                      maxLength: 200,
+                      decoration: const InputDecoration(
+                        hintText: 'e.g. A shopping bag with a crown, bold and modern',
+                        counterText: '',
+                        isDense: true,
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 10),
+                FilledButton.icon(
+                  onPressed: _generating ? null : _generateLogo,
+                  icon: _generating
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white))
+                      : const Icon(Icons.auto_awesome, size: 18),
+                  label: Text(_generating ? 'Drawing your logo… (about 15 seconds)' : (_logo.isEmpty ? 'Generate logo' : 'Generate another')),
+                ),
+              ]),
+            ),
             const SizedBox(height: 18),
             FilledButton(
               onPressed: _saving ? null : _save,
