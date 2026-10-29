@@ -21,7 +21,7 @@ const SEED_BULK = {
 
 // The backend (backend/app.py). Accounts and the product catalogue live there;
 // each page loads them from it before rendering.
-const API_BASE = 'https://m2c.13-48-31-7.sslip.io';
+const API_BASE = 'https://api.eazy2buychina.com';
 
 // AI features run on the backend, which keeps the OpenAI key: the business
 // assistant and customer care (POST /api/assistant/chat) and AiStudio's

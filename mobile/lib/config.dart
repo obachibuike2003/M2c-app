@@ -3,13 +3,13 @@
 class AppConfig {
   /// The Flask backend (backend/app.py). Override when testing against a local
   /// server: flutter run --dart-define=API_BASE=http://127.0.0.1:5000
-  static const apiBase = String.fromEnvironment('API_BASE', defaultValue: 'https://m2c.13-48-31-7.sslip.io');
+  static const apiBase = String.fromEnvironment('API_BASE', defaultValue: 'https://api.eazy2buychina.com');
 
   /// Where the product photos (assets/products/...) are served from: the
-  /// website by default. The hosted web app sets this to '' and serves the
+  /// website (eazy2buychina.com) by default. The hosted web app sets this to '' and serves the
   /// photos itself, from the same address, so the browser lets the app draw
   /// on them (AiStudio colours and previews).
-  static const siteBase = String.fromEnvironment('SITE_BASE', defaultValue: 'https://m2c-app-vqeb.onrender.com');
+  static const siteBase = String.fromEnvironment('SITE_BASE', defaultValue: 'https://eazy2buychina.com');
 
   static const appName = 'Easy2buy';
 
@@ -24,7 +24,7 @@ class AppConfig {
   static const referralReward = 1000;
 
   /// Where invite links send people (the hosted app).
-  static const appUrl = 'https://app.13-48-31-7.sslip.io';
+  static const appUrl = 'https://app.eazy2buychina.com';
 
   static const shippingFee = 2500;
   static const freeShippingFrom = 50000;
