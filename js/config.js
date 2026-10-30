@@ -1,6 +1,6 @@
 // Brand settings. Change the name here and every page picks it up.
 const APP = {
-  name: 'Easy2buy',
+  name: 'Eazy2buy',
   tagline: 'Shop China. Pay in Naira.',
   supportEmail: 'support@example.com',
   supportWhatsapp: '2348000000000',

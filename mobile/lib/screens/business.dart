@@ -100,7 +100,7 @@ class _BusinessScreenState extends State<BusinessScreen> {
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(agent?.name ?? 'Your agent', style: Brand.head(19)),
-                    Text(agent != null ? 'Your Easy2buy agent' : 'An agent will be assigned soon', style: const TextStyle(color: Brand.muted, fontSize: 13)),
+                    Text(agent != null ? 'Your Eazy2buy agent' : 'An agent will be assigned soon', style: const TextStyle(color: Brand.muted, fontSize: 13)),
                   ]),
                 ),
                 if (agent != null)

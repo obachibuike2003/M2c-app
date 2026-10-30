@@ -446,7 +446,8 @@ function showcase() {
 }
 
 function logoHtml(extraClass = '') {
-  return `<a class="logo ${extraClass}" href="index.html"><span class="logo-mark" aria-hidden="true">${esc(APP.name.charAt(0))}</span>${esc(APP.name)}</a>`;
+  // "Eazy2buy" with a tiny "china" after it, matching the domain eazy2buychina.com.
+  return `<a class="logo ${extraClass}" href="index.html" aria-label="${esc(APP.name)} China"><span class="logo-mark" aria-hidden="true">${esc(APP.name.charAt(0))}</span><span class="logo-word" aria-hidden="true">${esc(APP.name)}<small class="logo-china">china</small></span></a>`;
 }
 
 function mountChrome(active) {

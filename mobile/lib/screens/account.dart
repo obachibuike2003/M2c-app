@@ -241,7 +241,7 @@ class _Guest extends StatelessWidget {
   Widget build(BuildContext context) {
     return EmptyState(
       icon: Icons.person_outline,
-      title: 'Sign in to Easy2buy',
+      title: 'Sign in to Eazy2buy',
       text: 'Save products, track your orders and unlock wholesale prices for your business.',
       action: Column(children: [
         FilledButton(

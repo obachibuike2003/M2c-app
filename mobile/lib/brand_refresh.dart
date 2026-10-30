@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'config.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -159,7 +158,7 @@ class _Header extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(AppConfig.appName, style: Brand.head(26, weight: FontWeight.w800, color: Colors.white).copyWith(letterSpacing: -0.5)),
+                  const Wordmark(size: 26, color: Colors.white, chinaColor: Color(0xFFFFE08A)),
                 ]),
                 const SizedBox(height: 3),
                 AnimatedSwitcher(

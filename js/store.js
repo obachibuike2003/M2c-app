@@ -267,7 +267,7 @@ const Store = (() => {
     updateUser(user.id, patch);
     if (patch.agentId) {
       const a = agent(patch.agentId);
-      if (a) sendMessage(user.id, 'agent', `Hi ${user.name.split(' ')[0]}, I'm ${a.name}, your Easy2buy agent. I'll help you with bulk orders, custom branding and delivery. Ask me anything here.`);
+      if (a) sendMessage(user.id, 'agent', `Hi ${user.name.split(' ')[0]}, I'm ${a.name}, your Eazy2buy agent. I'll help you with bulk orders, custom branding and delivery. Ask me anything here.`);
     }
     return { ok: true };
   }

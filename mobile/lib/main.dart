@@ -19,11 +19,11 @@ import 'widgets.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(statusBarColor: Colors.transparent, statusBarIconBrightness: Brightness.dark));
-  runApp(ChangeNotifierProvider(create: (_) => AppState(), child: const Easy2buyApp()));
+  runApp(ChangeNotifierProvider(create: (_) => AppState(), child: const Eazy2buyApp()));
 }
 
-class Easy2buyApp extends StatelessWidget {
-  const Easy2buyApp({super.key});
+class Eazy2buyApp extends StatelessWidget {
+  const Eazy2buyApp({super.key});
 
   @override
   Widget build(BuildContext context) => MaterialApp(

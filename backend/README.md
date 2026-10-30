@@ -1,4 +1,4 @@
-# Easy2buy backend (Flask)
+# Eazy2buy backend (Flask)
 
 The site's **accounts and product catalogue** live here. On every page load
 `../js/store.js` fetches `GET /api/bootstrap` (catalogue + signed-in account)

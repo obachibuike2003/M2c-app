@@ -1,4 +1,4 @@
-"""Easy2buy backend - single-file Flask app.
+"""Eazy2buy backend - single-file Flask app.
 
 Not connected to the frontend yet (see README.md). Run it with:
     python app.py
@@ -1151,7 +1151,7 @@ def _shop_brief(user):
              for p in products]
     tiers = ", ".join(f"{t['from']}+ pieces {t['off']}% off" for t in BULK_TIERS)
     about = [
-        "Shop: Easy2buy, Nigeria. Goods bought from factories in China, priced in naira, delivered to the door.",
+        "Shop: Eazy2buy, Nigeria. Goods bought from factories in China, priced in naira, delivered to the door.",
         f"Delivery: N{SHIPPING_FEE} per order, free from N{FREE_SHIPPING_FROM}. Small goods arrive in 7-15 days, "
         "bulk raw materials and furniture 20-40 days, cars 45-60 days. Every order can be tracked step by step.",
         "Payment: pay on delivery in the app. Buyer protection: if goods don't arrive or don't match, the money goes back to the wallet.",
@@ -1175,13 +1175,13 @@ def _shop_brief(user):
 
 _MODES = {
     "business": (
-        "You are the Easy2buy business assistant for small Nigerian business owners. Help them choose stock, "
+        "You are the Eazy2buy business assistant for small Nigerian business owners. Help them choose stock, "
         "work out bulk prices and profit (use the business discounts), price their goods, market on WhatsApp, "
         "Instagram and TikTok, and build their brand. Be practical, warm and brief (under 120 words), in plain English. "
         "Only quote prices from the product list. Suggest up to 4 product ids that fit."
     ),
     "support": (
-        "You are Easy2buy customer care. Answer questions about orders, delivery, payment, the wallet, exchange, "
+        "You are Eazy2buy customer care. Answer questions about orders, delivery, payment, the wallet, exchange, "
         "accounts and business buying, kindly and briefly (under 100 words). Use the customer's real orders when they ask "
         "about an order. Set handoff to true, and say you're passing them to a person, when the issue needs a human: "
         "refunds, damaged, wrong or missing goods, payment or wallet money problems, cancelling a paid order, complaints, "

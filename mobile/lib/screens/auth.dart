@@ -45,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return _AuthScaffold(
       title: 'Welcome back',
-      subtitle: widget.reason ?? 'Sign in to your Easy2buy account.',
+      subtitle: widget.reason ?? 'Sign in to your Eazy2buy account.',
       child: Form(
         key: _form,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -74,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
           FilledButton(onPressed: _busy ? null : _submit, child: _busy ? const _Spinner() : const Text('Sign in')),
           const SizedBox(height: 14),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            const Text('New to Easy2buy? ', style: TextStyle(color: Brand.muted)),
+            const Text('New to Eazy2buy? ', style: TextStyle(color: Brand.muted)),
             GestureDetector(
               onTap: () async {
                 final ok = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const SignupScreen()));

@@ -11,7 +11,7 @@ class AppConfig {
   /// on them (AiStudio colours and previews).
   static const siteBase = String.fromEnvironment('SITE_BASE', defaultValue: 'https://eazy2buychina.com');
 
-  static const appName = 'Easy2buy';
+  static const appName = 'Eazy2buy';
 
   /// When this build was made, shown on the Account screen so you can tell
   /// which version a phone is running. Set by the deploy script.

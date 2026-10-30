@@ -94,7 +94,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   }
 
-  /// WhatsApp a real person: a business buyer's own agent, or Easy2buy support.
+  /// WhatsApp a real person: a business buyer's own agent, or Eazy2buy support.
   void _talkToPerson() {
     final s = context.read<AppState>();
     final u = s.user;

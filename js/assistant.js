@@ -138,7 +138,7 @@ const Assistant = (() => {
     };
   }
 
-  // A real person on WhatsApp: a business buyer's own agent, or Easy2buy support.
+  // A real person on WhatsApp: a business buyer's own agent, or Eazy2buy support.
   function humanLink(lastQuestion) {
     const user = Store.currentUser();
     const a = user && user.mode === 'business' && user.agentId ? Store.agent(user.agentId) : null;

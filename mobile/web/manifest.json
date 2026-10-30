@@ -1,11 +1,11 @@
 {
-    "name": "Easy2buy",
-    "short_name": "Easy2buy",
+    "name": "Eazy2buy",
+    "short_name": "Eazy2buy",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFFFFF",
     "theme_color": "#E0182D",
-    "description": "Easy2buy - shop China, pay in naira",
+    "description": "Eazy2buy - shop China, pay in naira",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -30,7 +30,7 @@ mountChrome('business');
       <section class="card chat" id="agent" aria-labelledby="agent-h">
         <div class="chat-head">
           <span class="avatar">${esc((a ? a.name : '?').charAt(0))}</span>
-          <div><h2 id="agent-h">${a ? esc(a.name) : 'Your agent'}</h2><span class="small muted">${a ? 'Your Easy2buy agent' : 'An agent will be assigned soon'}</span></div>
+          <div><h2 id="agent-h">${a ? esc(a.name) : 'Your agent'}</h2><span class="small muted">${a ? 'Your Eazy2buy agent' : 'An agent will be assigned soon'}</span></div>
           ${a && a.whatsapp ? `<a class="btn btn-outline btn-sm" href="${esc(waLink(a.whatsapp, `Hi ${a.name}, this is ${user.name} (${user.business.name}) on ${APP.name}.`))}" target="_blank" rel="noopener">${icon('whatsapp', 16)} WhatsApp</a>` : ''}
         </div>
         <div class="chat-log" id="chat-log" aria-live="polite"></div>

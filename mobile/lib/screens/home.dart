@@ -83,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
               hasScrollBody: false,
               child: EmptyState(
                 icon: Icons.wifi_off_rounded,
-                title: 'Can\'t reach Easy2buy',
+                title: 'Can\'t reach Eazy2buy',
                 text: s.loadError!,
                 action: FilledButton(onPressed: s.refresh, child: const Text('Try again')),
               ),

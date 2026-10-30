@@ -1,6 +1,6 @@
-# Easy2buy mobile app
+# Eazy2buy mobile app
 
-The Flutter (Dart) version of the Easy2buy storefront. It talks to the same
+The Flutter (Dart) version of the Eazy2buy storefront. It talks to the same
 Flask backend as the website (`../backend/app.py`), so accounts, products and
 orders are shared between the app and the site.
 

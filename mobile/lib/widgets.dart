@@ -154,8 +154,27 @@ class Logo extends StatelessWidget {
   Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
         const LogoMark(),
         const SizedBox(width: 9),
-        Text(AppConfig.appName, style: Brand.head(22, weight: FontWeight.w800, color: color).copyWith(letterSpacing: -0.4)),
+        Wordmark(size: 22, color: color),
       ]);
+}
+
+/// "Eazy2buy" with a tiny "china" after it, matching the domain eazy2buychina.com.
+class Wordmark extends StatelessWidget {
+  final double size;
+  final Color color, chinaColor;
+  const Wordmark({super.key, this.size = 22, this.color = Brand.ink, this.chinaColor = Brand.red600});
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        label: '${AppConfig.appName} China',
+        excludeSemantics: true,
+        child: Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
+          Text(AppConfig.appName, style: Brand.head(size, weight: FontWeight.w800, color: color).copyWith(letterSpacing: -size * 0.02)),
+          const SizedBox(width: 2),
+          // Small but readable: never below 10 points.
+          Text('china', style: TextStyle(fontSize: size * 0.5 < 10 ? 10 : size * 0.5, fontWeight: FontWeight.w700, color: chinaColor, letterSpacing: 0.3)),
+        ]),
+      );
 }
 
 // ---------------------------------------------------------------- images

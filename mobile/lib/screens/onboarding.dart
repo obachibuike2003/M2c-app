@@ -16,7 +16,7 @@ class SplashScreen extends StatelessWidget {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             const LogoMark(size: 104),
             const SizedBox(height: 18),
-            Text(AppConfig.appName, style: Brand.head(32, weight: FontWeight.w800, color: Brand.red).copyWith(letterSpacing: -0.6)),
+            const Wordmark(size: 32, color: Brand.red, chinaColor: Brand.ink),
             const SizedBox(height: 4),
             Text(AppConfig.tagline, style: const TextStyle(color: Brand.muted, fontWeight: FontWeight.w500)),
           ]),

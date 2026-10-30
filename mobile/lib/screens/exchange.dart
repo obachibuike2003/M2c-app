@@ -187,7 +187,7 @@ class _ExchangeScreenState extends State<ExchangeScreen> {
           ]),
         ),
         const SizedBox(height: 10),
-        const Text('Demo rates, set by Easy2buy. They are not live market prices.', textAlign: TextAlign.center, style: TextStyle(color: Brand.muted, fontSize: 12)),
+        const Text('Demo rates, set by Eazy2buy. They are not live market prices.', textAlign: TextAlign.center, style: TextStyle(color: Brand.muted, fontSize: 12)),
       ]),
     );
   }
