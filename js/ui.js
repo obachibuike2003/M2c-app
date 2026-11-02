@@ -535,6 +535,7 @@ function mountChrome(active) {
           <a href="exchange.html">Exchange</a>
           <a href="wallet.html">Wallet</a>
           <a href="support.html">Customer service</a>
+          <a href="terms.html">Terms and Conditions</a>
         </div>
       </div>
       <div class="container ftr-note">Demo build: payments, balances and exchange rates are simulated and stored only in this browser.</div>

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../app_state.dart';
+import '../config.dart';
+import '../terms.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -118,7 +120,7 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
     if (!_terms) {
-      setState(() => _error = 'Please agree to the terms to continue.');
+      setState(() => _error = 'Please read and agree to the Terms and Conditions to continue.');
       return;
     }
     setState(() { _busy = true; _error = null; });
@@ -195,11 +197,20 @@ class _SignupScreenState extends State<SignupScreen> {
             contentPadding: EdgeInsets.zero,
             controlAffinity: ListTileControlAffinity.leading,
             activeColor: Brand.red,
-            title: const Text('I agree to the Terms of Service and the Escrow & Buyer Protection Policy.', style: TextStyle(fontSize: 13)),
+            title: const Text('I am 18 or older and I agree to the ${AppConfig.appName} Terms and Conditions and the Privacy Policy.', style: TextStyle(fontSize: 13)),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              style: TextButton.styleFrom(padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TermsScreen())),
+              icon: const Icon(Icons.description_outlined, size: 17),
+              label: const Text('Read the Terms and Conditions'),
+            ),
           ),
           if (_error != null) _ErrorText(_error!),
           const SizedBox(height: 16),
-          FilledButton(onPressed: _busy ? null : _submit, child: _busy ? const _Spinner() : const Text('Create account')),
+          FilledButton(onPressed: _busy ? null : _submit, child: _busy ? const _Spinner() : const Text('Agree & Continue')),
         ]),
       ),
     );

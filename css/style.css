@@ -889,3 +889,10 @@ a.stat:hover { text-decoration: none; transform: translateY(-3px); box-shadow: v
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .reveal { opacity: 1; transform: none; }
 }
+
+/* Terms and Conditions */
+.terms h1 { margin: 6px 0 4px; }
+.terms-section { margin-top: 22px; }
+.terms-section h2 { font-size: 1.1rem; margin: 0 0 8px; }
+.terms-section p, .terms-section li { line-height: 1.6; color: var(--text); }
+.terms-section ul { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 8px; }

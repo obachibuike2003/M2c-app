@@ -77,18 +77,16 @@ mountChrome('login');
     root.innerHTML = `
       ${stepHead(2, 4)}
       <h1>${STEP_NAMES[1]}</h1>
-      <div class="card mt-16" style="max-height:260px; overflow-y:auto; padding:16px">
-        <p><b>Cross-border trade terms.</b> Orders are sourced and shipped from China; prices and delivery windows shown at checkout are estimates and can shift with supplier stock or customs.</p>
-        <p class="mt-12"><b>Escrow &amp; buyer protection.</b> Payment is held against your order until it's confirmed delivered. If an order doesn't arrive or doesn't match what was ordered, the amount paid is returned to your ${esc(APP.name)} wallet.</p>
-        <p class="mt-12"><b>Your account.</b> You're responsible for keeping your password private and for the accuracy of the details you give us, including for business accounts.</p>
-        <p class="mt-12 small muted">Demo build: this is placeholder copy, not a real legal agreement.</p>
+      <div class="card terms mt-16" style="max-height:340px; overflow-y:auto; padding:16px" tabindex="0" aria-label="Terms and Conditions">
+        ${termsHtml()}
       </div>
+      <p class="small mt-12"><a href="terms.html" target="_blank" rel="noopener">Open the full Terms and Conditions in a new tab</a></p>
       <label class="row mt-16" style="align-items:flex-start; gap:10px">
         <input type="checkbox" id="terms-check" style="margin-top:3px">
-        <span>I agree to the Terms of Service and the Escrow &amp; Buyer Protection Policy.</span>
+        <span>I am 18 or older and I agree to the ${esc(APP.name)} Terms and Conditions and the Privacy Policy.</span>
       </label>
       <p class="form-error" id="auth-error" role="alert" hidden></p>
-      <button class="btn btn-primary btn-block mt-16" id="terms-continue" disabled>Agree &amp; continue</button>`;
+      <button class="btn btn-primary btn-block mt-16" id="terms-continue" disabled>Agree &amp; Continue</button>`;
   }
 
   function renderStep3() {

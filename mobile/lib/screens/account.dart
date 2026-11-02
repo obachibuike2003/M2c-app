@@ -12,6 +12,7 @@ import 'exchange.dart';
 import 'orders.dart';
 import 'referral.dart';
 import 'support.dart';
+import '../terms.dart';
 import 'wallet.dart';
 
 class AccountScreen extends StatelessWidget {
@@ -104,6 +105,7 @@ class AccountScreen extends StatelessWidget {
           ),
           // The AI answers first and hands over to a person when it needs one.
           _MenuRow(icon: Icons.support_agent, title: 'Customer service', trailing: 'Chat', onTap: () => _push(context, const AssistantScreen(support: true))),
+          _MenuRow(icon: Icons.description_outlined, title: 'Terms and Conditions', onTap: () => _push(context, const TermsScreen())),
         ]),
         const SizedBox(height: 18),
         OutlinedButton.icon(
