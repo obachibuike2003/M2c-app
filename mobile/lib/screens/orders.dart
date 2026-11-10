@@ -6,6 +6,7 @@ import '../config.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'payment.dart';
 
 String _date(DateTime? d) {
   if (d == null) return '';
@@ -75,10 +76,25 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         Row(children: [
                           Text(o.id, style: Brand.head(17)),
                           const Spacer(),
-                          Pill(o.status, bg: o.stage == last ? Brand.greenSoft : Brand.blueSoft, fg: o.stage == last ? Brand.green : Brand.blue),
+                          o.status == 'Awaiting payment' || o.status == 'Payment expired'
+                              ? Pill(o.status, bg: const Color(0xFFFFF1D6), fg: const Color(0xFF8F4D00))
+                              : Pill(o.status, bg: o.stage == last ? Brand.greenSoft : Brand.blueSoft, fg: o.stage == last ? Brand.green : Brand.blue),
                         ]),
                         const SizedBox(height: 4),
                         Text('${_date(o.createdAt)} · ${o.items.length} item${o.items.length == 1 ? '' : 's'} · ${money(o.total)}', style: const TextStyle(color: Brand.muted, fontSize: 13)),
+                        if (o.awaitingPayment)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 10),
+                            child: FilledButton.icon(
+                              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(42)),
+                              onPressed: () async {
+                                await Navigator.of(context).push(MaterialPageRoute(builder: (_) => PaymentScreen(order: o)));
+                                if (mounted) _reload();
+                              },
+                              icon: const Icon(Icons.lock_outline, size: 17),
+                              label: Text('Pay now · ${money(o.total)}'),
+                            ),
+                          ),
                         const SizedBox(height: 12),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(9),

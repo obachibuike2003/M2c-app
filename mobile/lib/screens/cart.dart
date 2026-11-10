@@ -6,7 +6,9 @@ import '../config.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'auth.dart';
+import '../api.dart';
 import 'orders.dart';
+import 'payment.dart';
 import '../media.dart';
 import 'product.dart';
 import 'studio.dart';
@@ -212,6 +214,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _form = GlobalKey<FormState>();
   late final Map<String, TextEditingController> _f;
   bool _busy = false;
+  String _pay = 'delivery'; // pay online now, or on delivery
+  bool _nomba = false; // switched on at the server (keys set)
 
   static const _fields = [('name', 'Full name'), ('phone', 'Phone number'), ('street', 'Street address'), ('city', 'City'), ('state', 'State')];
 
@@ -224,6 +228,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       for (final (key, _) in _fields)
         key: TextEditingController(text: (saved[key] ?? (key == 'name' ? s.user?.name : key == 'phone' ? s.user?.phone : '') ?? '').toString()),
     };
+    // Offer Nomba (and pick it) only once the server says it's switched on.
+    s.api.get('/api/payments/config').then((c) {
+      if (mounted && (c as Map)['nomba'] == true) {
+        setState(() {
+          _nomba = true;
+          _pay = 'nomba';
+        });
+      }
+    }).catchError((_) {});
   }
 
   @override
@@ -239,9 +252,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     setState(() => _busy = true);
     final s = context.read<AppState>();
     try {
-      final order = await s.placeOrder({for (final e in _f.entries) e.key: e.value.text.trim()});
+      final order = await s.placeOrder({for (final e in _f.entries) e.key: e.value.text.trim()}, pay: _pay);
       if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => OrderPlacedScreen(orderId: order.id, total: order.total)), (r) => r.isFirst);
+      final Widget next = order.awaitingPayment ? PaymentScreen(order: order) : OrderPlacedScreen(orderId: order.id, total: order.total);
+      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => next), (r) => r.isFirst);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      // Online payment not switched on yet: fall back to pay on delivery.
+      if (e.code == 'pay_off') setState(() => _pay = 'delivery');
+      showMessage(context, e.message, error: true);
     } catch (e) {
       if (mounted) showMessage(context, e.toString(), error: true);
     } finally {
@@ -276,21 +295,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
           const SizedBox(height: 14),
           CardBox(
-            child: Row(children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(color: Brand.redSoft, borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.payments_outlined, color: Brand.red600),
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('How would you like to pay?', style: Brand.head(18)),
+              const SizedBox(height: 10),
+              _PayOption(
+                selected: _pay == 'nomba',
+                icon: Icons.lock_outline,
+                title: 'Pay now with Nomba',
+                text: _nomba ? 'Card, bank transfer or USSD on a secure page.' : 'Coming soon.',
+                onTap: _nomba ? () => setState(() => _pay = 'nomba') : () {},
               ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Pay on delivery', style: TextStyle(fontWeight: FontWeight.w700)),
-                  Text('Pay when your goods arrive.', style: TextStyle(color: Brand.muted, fontSize: 13)),
-                ]),
+              _PayOption(
+                selected: _pay == 'delivery',
+                icon: Icons.local_shipping_outlined,
+                title: 'Pay on delivery',
+                text: 'Pay when your goods arrive.',
+                onTap: () => setState(() => _pay = 'delivery'),
               ),
-              const Icon(Icons.check_circle, color: Brand.green),
             ]),
           ),
           const SizedBox(height: 14),
@@ -328,7 +350,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             onPressed: _busy || s.cartLines.isEmpty ? null : _place,
             child: _busy
                 ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
-                : Text('Place order · ${money(s.total)}'),
+                : Text('${_pay == 'nomba' ? 'Pay' : 'Place order'} · ${money(s.total)}'),
           ),
         ),
       ),
@@ -336,10 +358,59 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 }
 
+class _PayOption extends StatelessWidget {
+  final bool selected;
+  final IconData icon;
+  final String title, text;
+  final VoidCallback onTap;
+  const _PayOption({required this.selected, required this.icon, required this.title, required this.text, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        selected: selected,
+        label: '$title. $text',
+        excludeSemantics: true,
+        child: Pressable(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: easeOutStrong,
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: selected ? const Color(0xFFFFF5F6) : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: selected ? Brand.red : Brand.line, width: 1.5),
+            ),
+            child: Row(children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(color: Brand.redSoft, borderRadius: BorderRadius.circular(11)),
+                child: Icon(icon, color: Brand.red600, size: 21),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  Text(text, style: const TextStyle(color: Brand.muted, fontSize: 12.5)),
+                ]),
+              ),
+              Icon(selected ? Icons.radio_button_checked : Icons.radio_button_off, color: selected ? Brand.red : Brand.muted),
+            ]),
+          ),
+        ),
+      );
+}
+
 class OrderPlacedScreen extends StatelessWidget {
   final String orderId;
   final int total;
-  const OrderPlacedScreen({super.key, required this.orderId, required this.total});
+
+  /// Paid online (vs pay on delivery), for the wording.
+  final bool paid;
+  const OrderPlacedScreen({super.key, required this.orderId, required this.total, this.paid = false});
 
   @override
   Widget build(BuildContext context) {
@@ -362,7 +433,7 @@ class OrderPlacedScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Text('Order placed!', style: Brand.head(28, weight: FontWeight.w800)),
+            Text(paid ? 'Payment received!' : 'Order placed!', style: Brand.head(28, weight: FontWeight.w800)),
             const SizedBox(height: 8),
             Text('$orderId · ${money(total)}', style: const TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),

@@ -35,11 +35,15 @@ mountChrome('cart');
           <h2>Payment</h2>
           <div class="mt-16">
             <label class="choice">
-              <input type="radio" name="pay" value="wallet" ${enough ? 'checked' : ''}>
+              <input type="radio" name="pay" value="nomba" disabled>
+              <span><b>Pay now with Nomba</b><span class="small muted" id="nomba-sub">Coming soon</span></span>
+            </label>
+            <label class="choice">
+              <input type="radio" name="pay" value="wallet">
               <span><b>Naira wallet</b><span class="small muted">Balance: ${money(user.balances.NGN)}${enough ? '' : ` (you need ${money(totals.total - user.balances.NGN)} more)`}</span></span>
             </label>
             <label class="choice">
-              <input type="radio" name="pay" value="delivery" ${enough ? '' : 'checked'}>
+              <input type="radio" name="pay" value="delivery" checked>
               <span><b>Pay on delivery</b><span class="small muted">Pay cash or transfer when your order arrives</span></span>
             </label>
           </div>
@@ -59,11 +63,21 @@ mountChrome('cart');
           <div class="sum-row sum-total"><dt>Total</dt><dd>${money(totals.total)}</dd></div>
         </dl>
         <p class="form-error" id="checkout-error" role="alert" hidden></p>
+        <p class="small muted mt-12" id="nomba-note">Paying with Nomba, the total is confirmed on the next page (any referral credit comes off there).</p>
         <button class="btn btn-primary btn-block mt-16" type="submit">Place order</button>
       </aside>
     </form>`;
 
-  $('#checkout-form').addEventListener('submit', (e) => {
+  // Offer Nomba (and pick it) only once the server says it's switched on.
+  Store.api('GET', '/api/payments/config').then((c) => {
+    if (!c || !c.nomba) return;
+    const radio = $('input[name=pay][value=nomba]');
+    radio.disabled = false;
+    radio.checked = true;
+    $('#nomba-sub').textContent = "Card, bank transfer or USSD on Nomba's secure page";
+  }).catch(() => {});
+
+  $('#checkout-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
     const error = $('#checkout-error');
@@ -75,6 +89,31 @@ mountChrome('cart');
       return;
     }
     const { pay, ...address } = data;
+
+    // Nomba: the order is made on the server, then the buyer pays on Nomba's page.
+    if (pay === 'nomba') {
+      const btn = form.querySelector('button[type=submit]');
+      btn.disabled = true;
+      btn.textContent = 'Opening secure payment…';
+      try {
+        const order = await Store.api('POST', '/api/orders', {
+          items: lines.map((l) => ({ productId: l.product.id, qty: l.qty, ...(l.custom ? { custom: l.custom } : {}) })),
+          address, pay: 'nomba', returnTo: 'web'
+        });
+        lines.forEach((l) => Store.setCartQty(l.key, 0));
+        Store.updateUser(user.id, { address });
+        location.href = order.payment.checkoutLink;
+      } catch (err) {
+        showError(error, err.message);
+        btn.disabled = false;
+        btn.textContent = 'Place order';
+      }
+      return;
+    }
+    if (pay === 'wallet' && !enough) {
+      showError(error, `Your wallet needs ${money(totals.total - user.balances.NGN)} more. Choose another way to pay.`);
+      return;
+    }
     const res = Store.placeOrder({ address, pay });
     if (!res.ok) {
       showError(error, res.error);

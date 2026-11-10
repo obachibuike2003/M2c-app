@@ -104,4 +104,8 @@ class Order {
   int get total => ((raw['total'] ?? 0) as num).toInt();
   DateTime? get createdAt => raw['createdAt'] == null ? null : DateTime.tryParse(raw['createdAt'] as String);
   List<Map<String, dynamic>> get items => ((raw['items'] ?? []) as List).cast<Map<String, dynamic>>();
+
+  /// Online payment state: pending, paid, expired or underpaid; null for pay on delivery.
+  String? get paymentStatus => (raw['payment'] as Map?)?['status'] as String?;
+  bool get awaitingPayment => status == 'Awaiting payment' && paymentStatus == 'pending';
 }

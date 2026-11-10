@@ -328,6 +328,7 @@ class Order(db.Model):
             "tracking": self.tracking or [], "createdAt": self.created_at.isoformat() if self.created_at else None,
             "cancelledAt": self.cancelled_at.isoformat() if self.cancelled_at else None,
             "items": [i.to_dict() for i in self.items],
+            "payment": self.payments[-1].to_dict() if self.payments else None,
         }
 
 
@@ -346,6 +347,35 @@ class OrderItem(db.Model):
 
     def to_dict(self):
         return {"id": self.product_id, "name": self.name, "price": self.price, "qty": self.qty, "custom": self.custom}
+
+
+class Payment(db.Model):
+    """One attempt to pay for an order online (Nomba checkout)."""
+    __tablename__ = "payments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.String(40), db.ForeignKey("orders.id"), nullable=False, index=True)
+    provider = db.Column(db.String(20), default="nomba")
+    reference = db.Column(db.String(60), unique=True, nullable=False)  # ours, sent to Nomba as orderReference
+    provider_ref = db.Column(db.String(80), index=True)  # Nomba's own order reference (a UUID)
+    checkout_link = db.Column(db.Text)
+    amount = db.Column(db.Integer, nullable=False)  # naira expected
+    amount_paid = db.Column(db.Float)
+    status = db.Column(db.String(20), default="pending")  # pending | paid | expired | underpaid
+    method = db.Column(db.String(30))  # card, transfer, ussd... as Nomba reports it
+    created_at = db.Column(db.DateTime, default=now)
+    paid_at = db.Column(db.DateTime)
+
+    order = db.relationship("Order", backref=db.backref("payments", order_by="Payment.id"))
+
+    def to_dict(self):
+        return {
+            "status": self.status, "provider": self.provider, "reference": self.reference,
+            "amount": self.amount, "method": self.method,
+            # Only useful while it can still be paid.
+            "checkoutLink": self.checkout_link if self.status == "pending" else None,
+            "paidAt": self.paid_at.isoformat() if self.paid_at else None,
+        }
 
 
 class Review(db.Model):
@@ -840,11 +870,272 @@ def admin_delete_product(product_id):
     return jsonify({"ok": True})
 
 
+# --- online payment (Nomba) -----------------------------------------------
+# Flow: POST /api/orders with pay "nomba" creates the order as "Awaiting
+# payment" (stock held) plus a Nomba checkout; the buyer pays on Nomba's page.
+# An order only becomes paid after we ask Nomba ourselves and the amount
+# matches: through the signed webhook, the page Nomba sends people back to,
+# or the app checking. Whichever comes first wins; the others see it's done.
+# Unpaid orders expire after NOMBA_PAY_MINUTES and give their stock and any
+# referral credit back. Keys live only in .env:
+#   NOMBA_CLIENT_ID, NOMBA_CLIENT_SECRET, NOMBA_ACCOUNT_ID,
+#   NOMBA_WEBHOOK_KEY (the signature key set in Nomba's Webhook Setup),
+#   NOMBA_ENV=sandbox|live (sandbox until Nomba enables live keys).
+
+NOMBA_CLIENT_ID = os.environ.get("NOMBA_CLIENT_ID", "")
+NOMBA_CLIENT_SECRET = os.environ.get("NOMBA_CLIENT_SECRET", "")
+NOMBA_ACCOUNT_ID = os.environ.get("NOMBA_ACCOUNT_ID", "")
+NOMBA_WEBHOOK_KEY = os.environ.get("NOMBA_WEBHOOK_KEY", "")
+NOMBA_ENV = os.environ.get("NOMBA_ENV", "sandbox")
+# NOMBA_BASE_URL is only for tests against a stand-in Nomba; leave it unset.
+NOMBA_BASE = os.environ.get("NOMBA_BASE_URL") or ("https://api.nomba.com" if NOMBA_ENV == "live" else "https://sandbox.nomba.com")
+NOMBA_PAY_MINUTES = int(os.environ.get("NOMBA_PAY_MINUTES", 60))
+PUBLIC_API_URL = os.environ.get("PUBLIC_API_URL", "https://api.eazy2buychina.com")
+PUBLIC_APP_URL = os.environ.get("PUBLIC_APP_URL", "https://app.eazy2buychina.com")
+PUBLIC_SITE_URL = os.environ.get("PUBLIC_SITE_URL", "https://eazy2buychina.com")
+
+_nomba_token = {"value": None, "expires": 0.0}
+
+
+def nomba_ready():
+    return bool(NOMBA_CLIENT_ID and NOMBA_CLIENT_SECRET and NOMBA_ACCOUNT_ID)
+
+
+class NombaError(Exception):
+    pass
+
+
+def _nomba_access_token():
+    """Nomba tokens last 30 minutes; keep one and renew it 5 minutes early."""
+    import time
+    if _nomba_token["value"] and time.time() < _nomba_token["expires"] - 300:
+        return _nomba_token["value"]
+    res = requests.post(f"{NOMBA_BASE}/v1/auth/token/issue", timeout=20,
+                        headers={"accountId": NOMBA_ACCOUNT_ID, "Content-Type": "application/json"},
+                        json={"grant_type": "client_credentials", "client_id": NOMBA_CLIENT_ID, "client_secret": NOMBA_CLIENT_SECRET})
+    body = res.json() if res.content else {}
+    if res.status_code != 200 or body.get("code") != "00":
+        raise NombaError(body.get("description") or f"Nomba sign-in failed ({res.status_code})")
+    data = body["data"]
+    _nomba_token["value"] = data["access_token"]
+    try:
+        _nomba_token["expires"] = datetime.fromisoformat(data["expiresAt"].replace("Z", "+00:00")).timestamp()
+    except (KeyError, ValueError, AttributeError):
+        _nomba_token["expires"] = time.time() + 25 * 60
+    return _nomba_token["value"]
+
+
+def _nomba(method, path, **kwargs):
+    for attempt in (1, 2):
+        headers = {"Authorization": f"Bearer {_nomba_access_token()}", "accountId": NOMBA_ACCOUNT_ID,
+                   "Content-Type": "application/json"}
+        res = requests.request(method, f"{NOMBA_BASE}{path}", headers=headers, timeout=25, **kwargs)
+        if res.status_code == 401 and attempt == 1:
+            _nomba_token["value"] = None  # expired early: get a fresh one and try once more
+            continue
+        body = res.json() if res.content else {}
+        return res.status_code, body
+    return 401, {}
+
+
+def nomba_create_checkout(payment, email, callback_url):
+    status, body = _nomba("POST", "/v1/checkout/order", json={"order": {
+        "amount": f"{payment.amount:.2f}",
+        "currency": "NGN",
+        "orderReference": payment.reference,
+        "callbackUrl": callback_url,
+        "customerEmail": email,
+        "customerId": payment.order.user_id,
+        "orderMetaData": {"orderId": payment.order_id},
+    }, "tokenizeCard": False})
+    if status != 200 or body.get("code") != "00":
+        raise NombaError(body.get("description") or f"Nomba checkout failed ({status})")
+    payment.checkout_link = body["data"]["checkoutLink"]
+    payment.provider_ref = body["data"].get("orderReference")
+
+
+def nomba_check(payment):
+    """Asks Nomba what happened to this payment: (paid?, amount, method)."""
+    for ref in [r for r in (payment.provider_ref, payment.reference) if r]:
+        status, body = _nomba("GET", "/v1/transactions/accounts/single", params={"orderReference": ref})
+        if status == 200 and body.get("code") == "00" and body.get("data"):
+            d = body["data"]
+            try:
+                amount = float(d.get("onlineCheckoutAmount") or d.get("amount") or 0)
+            except (TypeError, ValueError):
+                amount = 0.0
+            return str(d.get("status", "")).upper() == "SUCCESS", amount, d.get("paymentMethod") or d.get("source")
+    return False, 0.0, None
+
+
+def _reward_referrer(user):
+    """The friend's first paid order pays the person who invited them, once."""
+    ref = referral_of(user)
+    if ref.get("by") and not ref.get("rewarded"):
+        referrer = db.session.get(User, ref["by"])
+        if referrer:
+            rr = referral_of(referrer)
+            set_referral(referrer, {**rr, "credit": int(rr.get("credit") or 0) + REFERRAL_REWARD})
+        set_referral(user, {**ref, "rewarded": True})
+
+
+def mark_paid(payment, amount, method=None):
+    """Records a confirmed payment. Safe to call more than once."""
+    if payment.status == "paid":
+        return
+    payment.amount_paid = amount
+    payment.method = method or payment.method
+    if amount + 0.5 < payment.amount:
+        payment.status = "underpaid"  # left for the team to sort out; the order stays held
+        db.session.commit()
+        return
+    payment.status = "paid"
+    payment.paid_at = now()
+    order = payment.order
+    if order.status in ("Awaiting payment", "Payment expired"):
+        order.status = "Order placed"
+        order.tracking = [*(order.tracking or []), {"stage": 0, "at": now().isoformat(), "note": "Paid with Nomba"}]
+    _reward_referrer(order.user)
+    db.session.commit()
+
+
+def refresh_payment(payment):
+    """Checks a pending payment with Nomba, and expires it once its time is up."""
+    if payment.status != "pending" or not nomba_ready():
+        return
+    try:
+        paid, amount, method = nomba_check(payment)
+    except (requests.RequestException, NombaError, ValueError):
+        return  # Nomba unreachable: try again on the next look
+    if paid:
+        mark_paid(payment, amount, method)
+        return
+    age = (now() - payment.created_at.replace(tzinfo=timezone.utc)).total_seconds() / 60 if payment.created_at else 0
+    if age >= NOMBA_PAY_MINUTES:
+        expire_order(payment.order, payment)
+
+
+def expire_order(order, payment):
+    """Unpaid in time: give the stock and any referral credit back."""
+    if order.status != "Awaiting payment":
+        return
+    for item in order.items:
+        product = db.session.get(Product, item.product_id)
+        if product:
+            product.stock += item.qty
+            product.sold = max(0, (product.sold or 0) - item.qty)
+    credit = int((order.address or {}).get("creditUsed") or 0)
+    if credit:
+        ref = referral_of(order.user)
+        set_referral(order.user, {**ref, "credit": int(ref.get("credit") or 0) + credit})
+    order.status = "Payment expired"
+    payment.status = "expired"
+    db.session.commit()
+
+
+def expire_stale_payments(user_id=None):
+    """Called when orders are looked at, so stale holds clear without a timer."""
+    from datetime import timedelta
+    cutoff = (now() - timedelta(minutes=NOMBA_PAY_MINUTES)).replace(tzinfo=None)  # stored times are plain UTC
+    q = Payment.query.join(Order).filter(Payment.status == "pending", Payment.created_at < cutoff)
+    if user_id:
+        q = q.filter(Order.user_id == user_id)
+    for payment in q.limit(20).all():
+        refresh_payment(payment)
+
+
+@app.get("/api/payments/config")
+def payments_config():
+    """Which ways to pay are switched on, so checkouts only offer what works."""
+    return jsonify({"nomba": nomba_ready(), "delivery": True})
+
+
+@app.get("/api/orders/<order_id>/payment")
+@login_required
+def order_payment(order_id):
+    """The app asks this after the buyer comes back from Nomba's page."""
+    o = db.session.get(Order, order_id)
+    if not o or (o.user_id != current_user.id and current_user.role != "admin"):
+        return jsonify({"error": "Order not found"}), 404
+    if o.payments:
+        refresh_payment(o.payments[-1])
+    return jsonify(o.to_dict())
+
+
+@app.post("/api/payments/nomba/webhook")
+def nomba_webhook():
+    """Nomba tells us about payments here. The signature (HMAC-SHA256 over the
+    fields Nomba names, keyed with our webhook key) proves it's from Nomba; the
+    amount isn't signed, so we still confirm with Nomba before marking paid."""
+    import base64
+    import hashlib
+    import hmac
+    if not NOMBA_WEBHOOK_KEY:
+        return jsonify({"error": "webhook key not set"}), 503
+    body = request.get_json(silent=True) or {}
+    d = body.get("data") or {}
+    merchant, txn, order_info = d.get("merchant") or {}, d.get("transaction") or {}, d.get("order") or {}
+    response_code = txn.get("responseCode")
+    response_code = "" if response_code in (None, "null") else str(response_code)
+    signed = ":".join(str(v if v is not None else "") for v in [
+        body.get("event_type"), body.get("requestId", body.get("request_id")),
+        merchant.get("userId"), merchant.get("walletId"),
+        txn.get("transactionId"), txn.get("type"), txn.get("time"), response_code,
+        request.headers.get("nomba-timestamp", ""),
+    ])
+    expected = base64.b64encode(hmac.new(NOMBA_WEBHOOK_KEY.encode(), signed.encode(), hashlib.sha256).digest()).decode()
+    if not hmac.compare_digest(expected.lower(), (request.headers.get("nomba-signature") or "").lower()):
+        return jsonify({"error": "bad signature"}), 401
+
+    if body.get("event_type") == "payment_success":
+        refs = [order_info.get("orderReference"), txn.get("merchantTxRef")]
+        payment = None
+        for r in [r for r in refs if r]:
+            payment = Payment.query.filter((Payment.reference == r) | (Payment.provider_ref == r)).first()
+            if payment:
+                break
+        if payment and payment.status != "paid":
+            try:
+                paid, amount, method = nomba_check(payment)
+            except (requests.RequestException, NombaError, ValueError):
+                return jsonify({"error": "could not confirm yet"}), 502  # Nomba retries later
+            if paid:
+                mark_paid(payment, amount, method or order_info.get("paymentMethod"))
+    return jsonify({"ok": True})
+
+
+@app.get("/pay/return")
+def pay_return():
+    """Where Nomba sends people after paying. Confirms, then points them back."""
+    from html import escape
+    order_id = request.args.get("order", "")
+    back = PUBLIC_SITE_URL + "/orders.html" if request.args.get("to") == "web" else PUBLIC_APP_URL + "/"
+    o = db.session.get(Order, order_id) if order_id else None
+    payment = o.payments[-1] if o and o.payments else None
+    if payment:
+        refresh_payment(payment)
+    paid = bool(payment and payment.status == "paid")
+    title = "Payment received" if paid else "We're checking your payment" if payment and payment.status == "pending" else "Payment not completed"
+    text = (f"Thank you! Order {escape(o.id)} is paid and on its way to the factory." if paid else
+            "If you finished paying, it can take a minute to show. Your order updates by itself." if payment and payment.status == "pending" else
+            "This order wasn't paid. You can try again from your orders.")
+    colour = "#0b7a43" if paid else "#e0182d"
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title} | Eazy2buy</title><style>body{{margin:0;min-height:100vh;display:grid;place-items:center;background:#f5f5f7;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#2a2c33}}
+.card{{background:#fff;border-radius:22px;padding:32px 26px;max-width:380px;margin:16px;text-align:center;box-shadow:0 10px 30px rgba(17,18,22,.08)}}
+.dot{{width:64px;height:64px;border-radius:50%;margin:0 auto 16px;display:grid;place-items:center;background:{colour}1a;color:{colour};font-size:32px;font-weight:800}}
+h1{{font-size:22px;margin:0 0 8px;color:#111216}}p{{line-height:1.5;color:#62666f;margin:0 0 22px}}
+a{{display:inline-block;background:#e0182d;color:#fff;text-decoration:none;font-weight:700;padding:13px 22px;border-radius:999px}}</style></head>
+<body><div class="card"><div class="dot">{"&#10003;" if paid else "&#8230;" if payment and payment.status == "pending" else "!"}</div><h1>{title}</h1><p>{text}</p>
+<a href="{escape(back)}">Back to Eazy2buy</a></div></body></html>"""
+
+
 # --- orders ------------------------------------------------------------
 
 @app.get("/api/orders")
 @login_required
 def list_orders():
+    expire_stale_payments(current_user.id)
     rows = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
     return jsonify([o.to_dict() for o in rows])
 
@@ -861,19 +1152,23 @@ def get_order(order_id):
 @app.post("/api/orders")
 @login_required
 def place_order():
-    """Body: { items: [{ productId, qty, custom? }], address: {...}, pay: "delivery" }
+    """Body: { items: [{ productId, qty, custom? }], address: {...},
+    pay: "nomba" | "delivery", returnTo?: "app" | "web" }
     Prices are worked out here, never taken from the request: business buyers
     get the bulk tiers and must meet each item's minimum, same rules as the
-    site's Store.unitPrice / bulkMin. Used by the mobile app; the website still
-    keeps its orders in the browser for now.
+    site's Store.unitPrice / bulkMin.
 
-    Only pay-on-delivery is accepted: wallet balances aren't on the server yet,
-    so a "wallet" order couldn't actually be charged."""
+    "nomba": the order waits for payment and the reply carries
+    payment.checkoutLink for the buyer to pay on. "delivery": pay when it arrives."""
     data = request.get_json(silent=True) or {}
     items = data.get("items") or []
     address = data.get("address") or {}
-    if data.get("pay", "delivery") != "delivery":
-        return jsonify({"error": "Only pay on delivery is available here for now."}), 400
+    pay = data.get("pay", "delivery")
+    if pay not in ("delivery", "nomba"):
+        return jsonify({"error": "Choose how you'd like to pay."}), 400
+    if pay == "nomba" and not nomba_ready():
+        return jsonify({"error": "Online payment isn't switched on yet. Choose pay on delivery for now.", "code": "pay_off"}), 503
+    expire_stale_payments(current_user.id)
     if not items:
         return jsonify({"error": "Your cart is empty."}), 400
 
@@ -926,25 +1221,34 @@ def place_order():
     ref = referral_of(current_user)
     credit_used = min(int(ref.get("credit") or 0), subtotal)
     total = subtotal - credit_used + delivery_fee
-    first_order = Order.query.filter_by(user_id=current_user.id).first() is None
+    # Orders that were never paid don't count: the friend's first real order earns the reward.
+    first_order = Order.query.filter(Order.user_id == current_user.id,
+                                     Order.status.notin_(["Awaiting payment", "Payment expired"])).first() is None
 
     if credit_used:
         address = {**address, "creditUsed": credit_used}  # shown on the order as "Referral credit"
     order = Order(id="ORD-" + uuid.uuid4().hex[:6].upper(), user_id=current_user.id, mode=current_user.mode,
-                  status="Order placed", stage=0, subtotal=subtotal, delivery_fee=delivery_fee, total=total,
-                  address=address, pay="delivery", tracking=[{"stage": 0, "at": now().isoformat()}], items=order_items)
+                  status="Awaiting payment" if pay == "nomba" else "Order placed", stage=0,
+                  subtotal=subtotal, delivery_fee=delivery_fee, total=total,
+                  address=address, pay=pay, tracking=[{"stage": 0, "at": now().isoformat()}], items=order_items)
     db.session.add(order)
 
     if credit_used:
         set_referral(current_user, {**ref, "credit": int(ref.get("credit") or 0) - credit_used})
         ref = referral_of(current_user)
-    # The friend's first order pays the person who invited them, once.
-    if first_order and ref.get("by") and not ref.get("rewarded"):
-        referrer = db.session.get(User, ref["by"])
-        if referrer:
-            rr = referral_of(referrer)
-            set_referral(referrer, {**rr, "credit": int(rr.get("credit") or 0) + REFERRAL_REWARD})
-        set_referral(current_user, {**ref, "rewarded": True})
+
+    if pay == "nomba":
+        # Ask Nomba for the payment page before saving anything, so a failure leaves no half order.
+        payment = Payment(order=order, reference=f"{order.id}-{secrets.token_hex(3).upper()}", amount=total)
+        db.session.add(payment)
+        to = "web" if data.get("returnTo") == "web" else "app"
+        try:
+            nomba_create_checkout(payment, current_user.email, f"{PUBLIC_API_URL}/pay/return?order={order.id}&to={to}")
+        except (requests.RequestException, NombaError, KeyError, ValueError) as e:
+            db.session.rollback()
+            return jsonify({"error": f"Couldn't open the payment page: {e}. Please try again.", "code": "pay_failed"}), 502
+    elif first_order:
+        _reward_referrer(current_user)  # pay on delivery: rewarded when placed, as before
     db.session.commit()
 
     return jsonify(order.to_dict()), 201

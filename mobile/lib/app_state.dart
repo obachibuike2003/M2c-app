@@ -281,11 +281,14 @@ class AppState extends ChangeNotifier {
   // ---------------------------------------------------------------- orders
 
   /// Places the order on the server, then empties the cart. Pay on delivery.
-  Future<Order> placeOrder(Map<String, String> address) async {
+  /// [pay] is "nomba" (pay online now) or "delivery". A Nomba order comes
+  /// back waiting for payment, with payment.checkoutLink to pay on.
+  Future<Order> placeOrder(Map<String, String> address, {String pay = 'nomba'}) async {
     final data = await api.post('/api/orders', {
       'items': [for (final l in cart) {'productId': l.productId, 'qty': l.qty, if (l.custom != null) 'custom': l.custom}],
       'address': address,
-      'pay': 'delivery',
+      'pay': pay,
+      'returnTo': 'app',
     });
     cart = [];
     await _saveCart();
@@ -395,6 +398,10 @@ class AppState extends ChangeNotifier {
     final found = [for (final j in data['products'] as List) product((j as Map)['id'] as String) ?? Product.fromJson(Map<String, dynamic>.from(j))];
     return (label: data['label'] as String?, products: found);
   }
+
+  /// Asks the server (which asks Nomba) whether an order has been paid.
+  Future<Order> paymentStatus(String orderId) async =>
+      Order(Map<String, dynamic>.from(await api.get('/api/orders/$orderId/payment') as Map));
 
   Future<List<Order>> myOrders() async {
     final list = await api.get('/api/orders') as List;
