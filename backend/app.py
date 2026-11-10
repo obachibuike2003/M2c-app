@@ -181,12 +181,17 @@ class User(db.Model, UserMixin):
             "createdAt": int(self.created_at.timestamp() * 1000) if self.created_at else None,
         }
 
-    def apply_patch(self, patch):
-        """Merge site-side account changes. role and email can never be set this way."""
+    def apply_patch(self, patch, admin=False):
+        """Merge site-side account changes. role and email can never be set this way.
+        Only an admin can set an identity check's result; a customer can only send a selfie."""
         prof = dict(self.profile or {})
         for key, value in (patch or {}).items():
             if key in ("name", "phone", "whatsapp"):
                 setattr(self, key, str(value or "").strip()[:120])
+            elif key == "verify" and not admin:
+                checked = _customer_verify(prof.get("verify"), value)
+                if checked is not None:
+                    prof["verify"] = checked
             elif key in PROFILE_KEYS:
                 prof[key] = value
         self.profile = prof  # reassigned so SQLAlchemy notices the JSON changed
@@ -204,6 +209,26 @@ class User(db.Model, UserMixin):
 # Account fields the site may write through PATCH. Anything else is ignored.
 PROFILE_KEYS = {"mode", "business", "brand", "verify", "address", "termsAcceptedAt",
                 "balances", "favs", "agentId"}
+
+MAX_SELFIE_CHARS = 3_000_000  # about a 2 MB photo as a data URL
+
+
+def _customer_verify(current, sent):
+    """What a customer's own 'verify' change is allowed to become, or None to keep
+    what's there. They may send a selfie for checking; they can never set the
+    result (verified / rejected), and can't undo an approval."""
+    if sent == current:
+        return None  # the site sends the whole account back; nothing changed
+    if not isinstance(sent, dict) or sent.get("status") != "pending":
+        return None
+    if isinstance(current, dict) and current.get("status") == "verified":
+        return None
+    selfie = sent.get("selfie")
+    if not isinstance(selfie, str) or not selfie.startswith("data:image/") or len(selfie) > MAX_SELFIE_CHARS:
+        return None
+    at = sent.get("at")
+    return {"status": "pending", "selfie": selfie,
+            "at": at if isinstance(at, (int, float)) else int(datetime.now(timezone.utc).timestamp() * 1000)}
 
 # Referrals. Kept in profile["referral"], which PATCH can't write (it isn't in
 # PROFILE_KEYS), so only the server changes codes and credit:
@@ -799,7 +824,7 @@ def admin_update_user(user_id):
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "User not found."}), 404
-    user.apply_patch(request.get_json(silent=True) or {})
+    user.apply_patch(request.get_json(silent=True) or {}, admin=True)
     db.session.commit()
     return jsonify(user.to_dict())
 
