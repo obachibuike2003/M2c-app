@@ -208,7 +208,31 @@ class User(db.Model, UserMixin):
 
 # Account fields the site may write through PATCH. Anything else is ignored.
 PROFILE_KEYS = {"mode", "business", "brand", "verify", "address", "termsAcceptedAt",
-                "balances", "favs", "agentId"}
+                "favs", "agentId"}  # no "balances": there's no wallet, and customers mustn't set money
+
+# Every order's journey, in order (same as the app's and website's tracker).
+# The team moves orders along on the admin page; customers see each step.
+TRACK_STAGES = [
+    "Order placed", "Payment confirmed", "Factory paid", "Goods being prepared",
+    "At the shipping company", "Checked by our agent", "Shipped to Nigeria",
+    "At our Nigeria warehouse", "On the way to your state", "Delivered",
+]
+PAID_STAGE = 1  # "Payment confirmed"
+
+
+def set_stage(order, stage, note=None):
+    """Moves an order to a tracker step, filling in any steps it skipped."""
+    stage = max(0, min(int(stage), len(TRACK_STAGES) - 1))
+    at = now().isoformat()
+    kept = [t for t in (order.tracking or []) if isinstance(t, dict) and int(t.get("stage", 0)) < stage]
+    start = (max(int(t["stage"]) for t in kept) + 1) if kept else 0
+    added = [{"stage": s, "at": at} for s in range(start, stage + 1)]
+    if note:
+        added[-1]["note"] = str(note)[:200]
+    order.tracking = kept + added
+    order.stage = stage
+    order.status = TRACK_STAGES[stage]
+
 
 MAX_SELFIE_CHARS = 3_000_000  # about a 2 MB photo as a data URL
 
@@ -895,6 +919,55 @@ def admin_delete_product(product_id):
     return jsonify({"ok": True})
 
 
+@app.get("/api/admin/orders")
+@admin_required
+def admin_list_orders():
+    """Every order, newest first, with who placed it."""
+    rows = Order.query.order_by(Order.created_at.desc()).limit(500).all()
+    out = []
+    for o in rows:
+        d = o.to_dict()
+        d["customer"] = {"name": o.user.name, "email": o.user.email, "phone": o.user.phone} if o.user else None
+        out.append(d)
+    return jsonify({"orders": out, "stages": TRACK_STAGES})
+
+
+@app.patch("/api/admin/orders/<order_id>")
+@admin_required
+def admin_update_order(order_id):
+    """Moves an order along the tracker ({"stage": n, "note": "..."}) or cancels it ({"cancel": true})."""
+    order = db.session.get(Order, order_id)
+    if not order:
+        return jsonify({"error": "Order not found."}), 404
+    data = request.get_json(silent=True) or {}
+    if order.status in ("Cancelled", "Payment expired"):
+        return jsonify({"error": f"This order is {order.status.lower()}, so it can't be changed."}), 409
+    if data.get("cancel"):
+        for item in order.items:
+            product = db.session.get(Product, item.product_id)
+            if product:
+                product.stock += item.qty
+                product.sold = max(0, (product.sold or 0) - item.qty)
+        paid = any(p.status == "paid" for p in order.payments)
+        order.status = "Cancelled"
+        order.cancelled_at = now()
+        order.tracking = [*(order.tracking or []), {"stage": order.stage, "at": now().isoformat(),
+                                                    "note": "Cancelled" + (" - refund due" if paid else "")}]
+        db.session.commit()
+        return jsonify(order.to_dict())
+    try:
+        stage = int(data.get("stage"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Send the step number to move the order to."}), 400
+    if not 0 <= stage < len(TRACK_STAGES):
+        return jsonify({"error": f"Steps go from 0 to {len(TRACK_STAGES) - 1}."}), 400
+    if order.status == "Awaiting payment" and stage >= PAID_STAGE:
+        return jsonify({"error": "This order hasn't been paid yet."}), 409
+    set_stage(order, stage, data.get("note"))
+    db.session.commit()
+    return jsonify(order.to_dict())
+
+
 # --- online payment (Nomba) -----------------------------------------------
 # Flow: POST /api/orders with pay "nomba" creates the order as "Awaiting
 # payment" (stock held) plus a Nomba checkout; the buyer pays on Nomba's page.
@@ -1018,8 +1091,7 @@ def mark_paid(payment, amount, method=None):
     payment.paid_at = now()
     order = payment.order
     if order.status in ("Awaiting payment", "Payment expired"):
-        order.status = "Order placed"
-        order.tracking = [*(order.tracking or []), {"stage": 0, "at": now().isoformat(), "note": "Paid with Nomba"}]
+        set_stage(order, PAID_STAGE, "Paid with Nomba")
     _reward_referrer(order.user)
     db.session.commit()
 
@@ -1483,11 +1555,14 @@ def _shop_brief(user):
         "Shop: Eazy2buy, Nigeria. Goods bought from factories in China, priced in naira, delivered to the door.",
         f"Delivery: N{SHIPPING_FEE} per order, free from N{FREE_SHIPPING_FROM}. Small goods arrive in 7-15 days, "
         "bulk raw materials and furniture 20-40 days, cars 45-60 days. Every order can be tracked step by step.",
-        "Payment: pay on delivery in the app. Buyer protection: if goods don't arrive or don't match, the money goes back to the wallet.",
+        "Payment: pay at checkout by card, bank transfer or USSD (Nomba). Once paid, we pay the factory, the goods are prepared, "
+        "taken to our shipping company in China, checked by our agent, shipped to Nigeria, received at our Nigeria warehouse, "
+        "then delivered to the customer's state. Steps: " + " > ".join(TRACK_STAGES) + ". "
+        "Buyer protection: if goods don't arrive or don't match, we refund the customer.",
         f"Business buyers: minimum {BULK_MIN_QTY} pieces per item (fewer for big items like cars), bulk discounts: {tiers}. "
         "They get a personal agent, can put their own logo on most goods (not name brands or cars) with AiStudio, "
         "and can build a brand kit (name, logo, colours, tagline) on Build my brand.",
-        "Wallet and Exchange: naira, yuan (RMB) and crypto balances; exchange at the rates shown, send out to Alipay, WeChat, banks or crypto wallets.",
+        "There is no wallet or currency exchange; don't offer them.",
         "Products (id|name|category|retail price|stock|business minimum):",
         *lines,
     ]
@@ -1510,10 +1585,10 @@ _MODES = {
         "Only quote prices from the product list. Suggest up to 4 product ids that fit."
     ),
     "support": (
-        "You are Eazy2buy customer care. Answer questions about orders, delivery, payment, the wallet, exchange, "
+        "You are Eazy2buy customer care. Answer questions about orders, delivery, payment, "
         "accounts and business buying, kindly and briefly (under 100 words). Use the customer's real orders when they ask "
         "about an order. Set handoff to true, and say you're passing them to a person, when the issue needs a human: "
-        "refunds, damaged, wrong or missing goods, payment or wallet money problems, cancelling a paid order, complaints, "
+        "refunds, damaged, wrong or missing goods, payment problems, cancelling a paid order, complaints, "
         "an upset customer, anything legal, or anything you can't answer from what you know. Never invent policies."
     ),
     "brand": (

@@ -104,8 +104,11 @@ const Store = (() => {
     return b;
   }
 
-  // Older saved orders used a plain status; map them onto the tracker steps.
-  const OLD_STATUS_STAGE = { Processing: 0, Shipped: 3, Delivered: 7 };
+  // Older saved orders used other step names; map them onto today's tracker steps.
+  const OLD_STATUS_STAGE = {
+    Processing: 0, Confirmed: 1, 'Bought from supplier': 2, Shipped: 6, 'Shipped from China': 6,
+    'Arrived in Nigeria': 7, 'At our Lagos warehouse': 7, 'Out for delivery': 8, Delivered: 9
+  };
 
   function seed() {
     // A new seed catalogue replaces the stored one (older product ids and photos no longer exist).
@@ -122,12 +125,14 @@ const Store = (() => {
     remove('session');
     if (read('users', []).some((u) => 'password' in u)) remove('users');
     const list = read('orders', []);
-    if (list.some((o) => o.stage === undefined)) {
+    const known = (o) => o.status === 'Cancelled' || (TRACK_STAGES[o.stage] && TRACK_STAGES[o.stage].name === o.status);
+    if (list.some((o) => o.stage === undefined || !known(o))) {
       list.forEach((o) => {
-        if (o.stage !== undefined) return;
+        if (o.stage !== undefined && known(o)) return;
+        if (o.status === 'Cancelled') { o.stage = Math.min(o.stage || 0, TRACK_STAGES.length - 1); return; }
         o.stage = OLD_STATUS_STAGE[o.status] ?? 0;
         o.tracking = [{ stage: o.stage, at: o.createdAt }];
-        if (o.status !== 'Cancelled') o.status = TRACK_STAGES[o.stage].name;
+        o.status = TRACK_STAGES[o.stage].name;
       });
       write('orders', list);
     }

@@ -104,16 +104,6 @@ String money(num amount) {
   return out.toString();
 }
 
-/// An amount in any wallet currency: ₦ and ¥ get symbols, crypto shows its code.
-String moneyIn(num amount, String code) {
-  var s = amount.abs().toStringAsFixed(AppState.dpOf(code));
-  // Like the site: yuan always shows 2 decimals, everything else drops trailing zeros.
-  if (code != 'CNY' && s.contains('.')) s = s.replaceFirst(RegExp(r'\.?0+$'), '');
-  final parts = s.split('.');
-  final n = '${amount < 0 ? '-' : ''}${money(int.parse(parts[0])).substring(1)}${parts.length > 1 ? '.${parts[1]}' : ''}';
-  return code == 'NGN' ? '₦$n' : code == 'CNY' ? '¥$n' : '$n $code';
-}
-
 String compact(int n) => n >= 1000 ? '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1).replaceAll('.0', '')}k' : '$n';
 
 void showMessage(BuildContext context, String text, {bool error = false}) {

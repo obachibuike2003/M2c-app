@@ -7,20 +7,35 @@ mountChrome('admin');
   const me = Store.currentUser();
 
   if (!me || me.role !== 'admin') {
-    root.innerHTML = `<div class="card empty">${icon('shield', 40)}<h1>Admins only</h1><p>Sign in with the store admin account to manage products, orders and rates.</p><a class="btn btn-primary" href="login.html?next=admin.html">Sign in</a></div>`;
+    root.innerHTML = `<div class="card empty">${icon('shield', 40)}<h1>Admins only</h1><p>Sign in with the store admin account to manage products, orders and customers.</p><a class="btn btn-primary" href="login.html?next=admin.html">Sign in</a></div>`;
     return;
   }
 
   const TABS = [
     ['overview', 'Overview'], ['products', 'Products'], ['categories', 'Categories'], ['orders', 'Orders'],
-    ['messages', 'Messages'], ['agents', 'Agents'], ['users', 'Customers'], ['bulk', 'Business pricing'],
-    ['rates', 'Rates'], ['payouts', 'Send-outs']
+    ['messages', 'Messages'], ['agents', 'Agents'], ['users', 'Customers'], ['bulk', 'Business pricing']
   ];
   const ICON_CHOICES = ['box', 'factory', 'flask', 'phone', 'monitor', 'cpu', 'shirt', 'sparkle', 'droplet', 'sofa', 'cup', 'bag', 'clock', 'smile', 'car', 'truck', 'tag', 'zap'];
   let tab = TABS.some(([id]) => id === location.hash.slice(1)) ? location.hash.slice(1) : 'overview';
   let thread = null; // customer whose messages are open
 
-  const userName = (id) => (Store.users().find((u) => u.id === id) || { name: 'Deleted user' }).name;
+  // Orders live on the server (from the website and the app).
+  let orders = null; // null while loading
+  let ordersError = '';
+  function loadOrders() {
+    Store.api('GET', '/api/admin/orders')
+      .then((res) => { orders = res.orders; ordersError = ''; })
+      .catch((e) => { orders = []; ordersError = e.message; })
+      .then(render);
+  }
+  const findOrder = (id) => (orders || []).find((o) => o.id === id);
+  const payText = (o) => {
+    const p = o.payment || {};
+    if (o.pay === 'nomba') return p.status === 'paid' ? '<span class="pill pill-green">Paid online</span>' : `<span class="pill pill-amber">Nomba: ${esc(p.status || 'pending')}</span>`;
+    return 'On delivery';
+  };
+  const locked = (o) => ['Cancelled', 'Payment expired', 'Awaiting payment'].includes(o.status);
+
   const table = (head, rows, emptyText) => (rows.length
     ? `<div class="table-wrap"><table><thead><tr>${head}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`
     : `<p class="muted">${emptyText}</p>`);
@@ -29,28 +44,26 @@ mountChrome('admin');
 
   const panels = {
     overview() {
-      const orders = Store.orders();
-      const live = orders.filter((o) => o.status !== 'Cancelled');
+      const all = orders || [];
+      const live = all.filter((o) => !locked(o));
       const products = Store.products();
-      const pending = Store.txns().filter((t) => t.type === 'payout' && t.status === 'processing').length;
       const verify = Store.users().filter((u) => u.verify && u.verify.status === 'pending').length;
       const low = products.filter((p) => p.stock <= 20).sort((a, b) => a.stock - b.stock);
       const stat = (label, value, go) => `<a class="stat" href="#${go}" data-tab="${go}"><span class="small muted">${label}</span><b>${value}</b></a>`;
       return `
         <div class="stats">
-          ${stat('Sales', money(live.reduce((n, o) => n + o.total, 0)), 'orders')}
+          ${stat('Sales', orders ? money(live.reduce((n, o) => n + o.total, 0)) : '…', 'orders')}
           ${stat('Open orders', live.filter((o) => o.stage < TRACK_STAGES.length - 1).length, 'orders')}
           ${stat('Business customers', businessUsers().length, 'users')}
           ${stat('Unread messages', unreadTotal(), 'messages')}
           ${stat('Selfies to check', verify, 'users')}
-          ${stat('Send-outs waiting', pending, 'payouts')}
           ${stat('Products', products.length, 'products')}
           ${stat('Categories', Store.categories().length, 'categories')}
         </div>
         <section class="card section">
           <h2>Recent orders</h2>
           <div class="mt-12">${table('<th>Order</th><th>Customer</th><th>Status</th><th class="num">Total</th>',
-            orders.slice(0, 5).map((o) => `<tr><td>${esc(o.id)}<br><span class="small muted">${formatDate(o.createdAt)}</span></td><td>${esc(userName(o.userId))}${o.mode === 'business' ? ' <span class="pill pill-blue">Business</span>' : ''}</td><td>${statusPill(o.status)}</td><td class="num">${money(o.total)}</td></tr>`),
+            all.slice(0, 5).map((o) => `<tr><td>${esc(o.id)}<br><span class="small muted">${formatDate(Date.parse(o.createdAt))}</span></td><td>${esc((o.customer || {}).name || (o.address || {}).name || '')}${o.mode === 'business' ? ' <span class="pill pill-blue">Business</span>' : ''}</td><td>${statusPill(o.status)}</td><td class="num">${money(o.total)}</td></tr>`),
             'No orders yet.')}</div>
         </section>
         <section class="card section">
@@ -106,24 +119,30 @@ mountChrome('admin');
     },
 
     orders() {
+      if (!orders) return '<section class="card"><h2>Orders</h2><p class="muted mt-12">Loading orders…</p></section>';
       return `
         <section class="card">
-          <div class="section-head"><h2>Orders</h2></div>
-          <p class="muted small">Move each order along the tracker as it happens. Customers see every step on their order page.</p>
+          <div class="section-head"><h2>Orders</h2><button type="button" class="btn btn-outline btn-sm" data-act="reload-orders">Refresh</button></div>
+          <p class="muted small">Move each order along as it happens: payment confirmed, factory paid, goods prepared, at the shipping company, checked by our agent, shipped to Nigeria, at the Nigeria warehouse, on the way to the customer's state, delivered. Customers see every step in the app and on the website.</p>
+          ${ordersError ? `<p class="form-error mt-12">${esc(ordersError)}</p>` : ''}
           <div class="mt-12">${table('<th>Order</th><th>Customer</th><th>Items</th><th>Payment</th><th class="num">Total</th><th>Tracker step</th>',
-            Store.orders().map((o) => `
+            orders.map((o) => {
+              const a = o.address || {};
+              const c = o.customer || {};
+              return `
               <tr>
-                <td>${esc(o.id)}<br><span class="small muted">${formatDate(o.createdAt)}</span>${o.mode === 'business' ? '<br><span class="pill pill-blue">Business</span>' : ''}</td>
-                <td>${esc(o.address.name)}<br><span class="small muted">${esc(o.address.phone)} · ${esc(o.address.city)}, ${esc(o.address.state)}</span></td>
-                <td class="small">${o.items.map((it, i) => `${it.qty} × ${esc(it.name)}${it.custom ? ` <button type="button" class="linkish" data-act="view-custom" data-id="${esc(o.id)}" data-i="${i}">${icon('wand', 14)} ${it.custom.pieces} customised</button>` : ''}`).join('<br>')}</td>
-                <td>${o.pay === 'wallet' ? 'Wallet (paid)' : 'On delivery'}</td>
+                <td>${esc(o.id)}<br><span class="small muted">${formatDate(Date.parse(o.createdAt))}</span>${o.mode === 'business' ? '<br><span class="pill pill-blue">Business</span>' : ''}</td>
+                <td>${esc(a.name || c.name || '')}<br><span class="small muted">${esc(a.phone || c.phone || '')} · ${esc(a.city || '')}, ${esc(a.state || '')}</span><br><span class="small muted">${esc(c.email || '')}</span></td>
+                <td class="small">${o.items.map((it, i) => `${it.qty} × ${esc(it.name)}${it.custom ? ` <button type="button" class="linkish" data-act="view-custom" data-id="${esc(o.id)}" data-i="${i}">${icon('wand', 14)} ${it.custom.pieces || ''} customised</button>` : ''}`).join('<br>')}</td>
+                <td>${payText(o)}</td>
                 <td class="num">${money(o.total)}</td>
-                <td>${o.status === 'Cancelled' ? statusPill(o.status) : `
+                <td>${locked(o) ? statusPill(o.status) : `
                   <select class="input" data-order="${esc(o.id)}" aria-label="Tracker step for ${esc(o.id)}">
-                    ${TRACK_STAGES.map((s, i) => `<option value="${i}"${i === o.stage ? ' selected' : ''}>${i + 1}. ${esc(s.name)}</option>`).join('')}
+                    ${TRACK_STAGES.map((st, i) => `<option value="${i}"${i === o.stage ? ' selected' : ''}>${i + 1}. ${esc(st.name)}</option>`).join('')}
                     <option value="cancel">Cancel order</option>
                   </select>`}</td>
-              </tr>`),
+              </tr>`;
+            }),
             'No orders yet.')}</div>
         </section>`;
     },
@@ -192,12 +211,11 @@ mountChrome('admin');
     },
 
     users() {
-      const orders = Store.orders();
       const agents = Store.agents();
       return `
         <section class="card">
           <div class="section-head"><h2>Customers</h2></div>
-          ${table('<th>Name</th><th>Contact</th><th>Buying as</th><th>Agent</th><th>Identity</th><th class="num">Orders</th><th class="num">Naira balance</th>',
+          ${table('<th>Name</th><th>Contact</th><th>Buying as</th><th>Agent</th><th>Identity</th><th class="num">Orders</th>',
             Store.users().map((u) => {
               const v = (u.verify || {}).status;
               return `
@@ -212,8 +230,7 @@ mountChrome('admin');
                   <img class="selfie" src="${esc(u.verify.selfie)}" alt="Selfie from ${esc(u.name)}">
                   <span class="row"><button type="button" class="btn btn-primary btn-sm" data-act="verify-ok" data-id="${esc(u.id)}">Verify</button><button type="button" class="btn btn-outline btn-sm" data-act="verify-no" data-id="${esc(u.id)}">Reject</button></span>`
                   : v ? statusPill(v) : '<span class="muted small">Not sent</span>'}</td>
-                <td class="num">${orders.filter((o) => o.userId === u.id).length}</td>
-                <td class="num">${money(u.balances.NGN)}</td>
+                <td class="num">${(orders || []).filter((o) => o.userId === u.id).length}</td>
               </tr>`;
             }),
             'No customers yet.')}
@@ -244,53 +261,6 @@ mountChrome('admin');
           <p class="form-error" id="bulk-error" role="alert" hidden></p>
           <div class="form-actions"><button class="btn btn-primary" type="submit">Save business pricing</button></div>
         </form>`;
-    },
-
-    rates() {
-      const rates = Store.rates();
-      return `
-        <form class="card" id="rates-form" novalidate>
-          <div class="section-head"><h2>Exchange rates</h2></div>
-          <p class="muted small">Naira per 1 unit. "Customer buys at" is what a customer pays you; "customer sells at" is what you pay a customer. The gap between them is your margin.</p>
-          <div class="table-wrap mt-12">
-            <table>
-              <thead><tr><th>Currency</th><th>Customer buys at (₦)</th><th>Customer sells at (₦)</th></tr></thead>
-              <tbody>
-                ${Object.keys(rates).map((c) => `
-                  <tr>
-                    <td><b>${c}</b><br><span class="small muted">${esc(rates[c].name)}</span></td>
-                    <td><input class="input" type="number" min="0" step="any" inputmode="decimal" name="${c}_buy" value="${rates[c].buy}" aria-label="${c} customer buys at"></td>
-                    <td><input class="input" type="number" min="0" step="any" inputmode="decimal" name="${c}_sell" value="${rates[c].sell}" aria-label="${c} customer sells at"></td>
-                  </tr>`).join('')}
-              </tbody>
-            </table>
-          </div>
-          <p class="form-error" id="rates-error" role="alert" hidden></p>
-          <div class="form-actions"><button class="btn btn-primary" type="submit">Save rates</button></div>
-        </form>`;
-    },
-
-    payouts() {
-      const list = Store.txns().filter((t) => t.type === 'payout');
-      return `
-        <section class="card">
-          <div class="section-head"><h2>Send-outs</h2></div>
-          <p class="muted small">Customers asking to move money out of their wallet. Mark one as sent after you make the transfer, or reject it to return the money.</p>
-          <div class="mt-12">${table('<th>Date</th><th>Customer</th><th>Destination</th><th class="num">Amount</th><th>Status</th><th>Actions</th>',
-            list.map((t) => `
-              <tr>
-                <td class="small muted">${formatDate(t.createdAt)}</td>
-                <td>${esc(userName(t.userId))}</td>
-                <td>${esc(t.desc.replace(/^Send to /, ''))}</td>
-                <td class="num">${money(-t.amount, t.currency)}</td>
-                <td>${statusPill(t.status)}</td>
-                <td>${t.status === 'processing' ? `<span class="row">
-                  <button type="button" class="btn btn-primary btn-sm" data-act="payout-ok" data-id="${esc(t.id)}">Mark sent</button>
-                  <button type="button" class="btn btn-outline btn-sm" data-act="payout-no" data-id="${esc(t.id)}">Reject</button>
-                </span>` : ''}</td>
-              </tr>`),
-            'No send-out requests yet.')}</div>
-        </section>`;
     }
   };
 
@@ -507,31 +477,30 @@ mountChrome('admin');
       toast(act === 'verify-ok' ? 'Customer verified' : 'Selfie rejected');
       render();
     }
+    if (act === 'reload-orders') { orders = null; render(); loadOrders(); }
     if (act === 'view-custom') {
-      const o = Store.order(id);
+      const o = findOrder(id);
       if (o) customDialog(o, o.items[Number(btn.dataset.i)]);
     }
-    if (act === 'payout-ok' || act === 'payout-no') {
-      Store.resolvePayout(id, act === 'payout-ok');
-      toast(act === 'payout-ok' ? 'Marked as sent' : 'Rejected and refunded');
-      render();
-    }
-    if (act === 'reset' && confirm('Erase all demo data in this browser (accounts, orders, products, rates) and start fresh?')) {
+    if (act === 'reset' && confirm('Erase all demo data in this browser (products, categories, agents and settings) and start fresh?')) {
       Store.resetDemo();
       location.href = 'login.html';
     }
   });
 
-  root.addEventListener('change', (e) => {
+  root.addEventListener('change', async (e) => {
     const select = e.target.closest('[data-order]');
     if (select) {
-      if (select.value === 'cancel') {
-        if (!confirm('Cancel this order? Stock is returned and wallet payments are refunded.')) return render();
-        Store.cancelOrder(select.dataset.order);
-        toast('Order cancelled');
-      } else {
-        Store.setOrderStage(select.dataset.order, select.value);
-        toast('Tracker updated');
+      const id = select.dataset.order;
+      const cancel = select.value === 'cancel';
+      if (cancel && !confirm('Cancel this order? Its stock goes back on sale. If it was paid online, you will need to refund the customer.')) return render();
+      select.disabled = true;
+      try {
+        const updated = await Store.api('PATCH', `/api/admin/orders/${encodeURIComponent(id)}`, cancel ? { cancel: true } : { stage: Number(select.value) });
+        orders = orders.map((o) => (o.id === id ? { ...o, ...updated } : o));
+        toast(cancel ? 'Order cancelled' : `Moved to: ${TRACK_STAGES[updated.stage].name}`);
+      } catch (err) {
+        toast(err.message, 'error');
       }
       return render();
     }
@@ -571,27 +540,13 @@ mountChrome('admin');
       toast('Business pricing saved');
       return render();
     }
-
-    if (form.id === 'rates-form') {
-      const next = Store.rates();
-      const error = $('#rates-error');
-      for (const code of Object.keys(next)) {
-        const buy = Number(d[code + '_buy']);
-        const sell = Number(d[code + '_sell']);
-        if (!(buy > 0) || !(sell > 0)) return showError(error, `Enter both ${code} rates as numbers above zero.`);
-        if (sell > buy) return showError(error, `${code}: the sell rate is above the buy rate, so you would lose money on every exchange.`);
-        next[code] = { ...next[code], buy, sell };
-      }
-      Store.saveRates(next);
-      showError(error, '');
-      toast('Rates saved');
-    }
   });
 
   // New customer messages from another tab.
   addEventListener('storage', (e) => { if (e.key === 'mp_messages' && tab === 'messages') render(); });
 
   render();
+  loadOrders();
 })();
 
 });

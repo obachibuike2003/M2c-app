@@ -66,8 +66,6 @@ mountChrome('account');
         <h2 id="links-h" class="visually-hidden">Shortcuts</h2>
         <div class="quick-links">
           <a href="orders.html">${icon('truck', 22)}<span>Track my orders</span></a>
-          <a href="wallet.html">${icon('wallet', 22)}<span>Wallet</span></a>
-          <a href="exchange.html">${icon('swap', 22)}<span>Exchange</span></a>
           ${biz ? `<a href="business.html">${icon('briefcase', 22)}<span>Business hub</span></a>` : `<a href="products.html?condition=used">${icon('tag', 22)}<span>Used products</span></a>`}
           <a href="support.html">${icon('headset', 22)}<span>Customer service</span></a>
         </div>

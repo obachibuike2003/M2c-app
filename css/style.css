@@ -176,6 +176,19 @@ main.container { padding-top: 16px; padding-bottom: 40px; min-height: 60vh; }
 .bottom-nav a.is-active .ic { transform: translateY(-2px); }
 .bottom-nav .count { right: calc(50% - 22px); top: 4px; }
 
+/* ---------- cart: address + pay (Temu/Jumia style) ---------- */
+.deliver { border: 1px solid var(--line); border-radius: 14px; padding: 14px; background: #fafafc; }
+.deliver h3 { display: flex; align-items: center; gap: 6px; font-size: 1rem; margin: 0; }
+.deliver .form-grid { gap: 10px; }
+.btn-lg { min-height: 54px; font-size: 1.05rem; }
+.center { text-align: center; }
+.paybar { position: fixed; left: 10px; right: 10px; bottom: 78px; z-index: 29; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 10px 10px 16px; background: #fff; border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-lg); }
+.paybar > div { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.paybar b { font-family: var(--font-head); font-size: 1.3rem; letter-spacing: -.02em; }
+.paybar .ok { color: var(--green, #13804b); font-weight: 600; }
+.paybar .btn { min-height: 50px; padding: 0 22px; font-size: 1rem; white-space: nowrap; }
+body.has-paybar { padding-bottom: 156px; }
+
 /* ---------- footer ---------- */
 .ftr { background: var(--ink); color: #b9bcc6; margin-top: 40px; padding: 48px 0 20px; font-size: .92rem; }
 .ftr-grid { display: grid; gap: 28px; grid-template-columns: 1fr 1fr; }
@@ -839,6 +852,8 @@ a.stat:hover { text-decoration: none; transform: translateY(-3px); box-shadow: v
 @media (min-width: 960px) {
   body { padding-bottom: 0; }
   .bottom-nav { display: none; }
+  .paybar { display: none; }
+  body.has-paybar { padding-bottom: 0; }
   .hdr-row { flex-wrap: nowrap; gap: 24px; padding-top: 14px; padding-bottom: 8px; }
   .search { order: 0; flex: 1 1 auto; }
   .hdr-actions { margin-left: 0; }

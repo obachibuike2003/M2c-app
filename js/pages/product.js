@@ -104,7 +104,7 @@ document.body.classList.add('product-detail-page');
         <ul class="facts">
           <li>${icon('truck', 18)}<span>Ships from China, arrives in about ${esc(p.ship || '7-15')} days. <a href="orders.html">Track every step</a>.</span></li>
           <li>${icon('check', 18)}<span>Free delivery on orders above ${money(APP.freeShippingFrom)}</span></li>
-          <li>${icon('shield', 18)}<span>Pay with your naira wallet or on delivery</span></li>
+          <li>${icon('shield', 18)}<span>Pay by card, transfer or USSD, then track every step</span></li>
           ${biz ? `<li>${icon('chat', 18)}<span>Questions? <a href="business.html#agent">Ask your agent</a> about this product.</span></li>` : ''}
         </ul>
       </div>
@@ -168,7 +168,7 @@ document.body.classList.add('product-detail-page');
     toast(qty > 1 ? `Added ${qty} to cart` : 'Added to cart');
     flyToCart(mainImg);
   });
-  $('#buy-btn').addEventListener('click', () => { if (add()) location.href = 'checkout.html'; });
+  $('#buy-btn').addEventListener('click', () => { if (add()) location.href = 'cart.html'; });
 
   /* ---------- reviews ---------- */
   function renderReviews() {

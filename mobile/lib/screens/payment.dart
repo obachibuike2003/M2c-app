@@ -73,6 +73,7 @@ class _PaymentScreenState extends State<PaymentScreen> with WidgetsBindingObserv
       if (_status != 'pending') {
         _timer?.cancel();
         if (_status == 'paid') {
+          context.read<AppState>().ordersChanged();
           Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => OrderPlacedScreen(orderId: o.id, total: o.total, paid: true)));
         }
       }

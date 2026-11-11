@@ -10,6 +10,7 @@ import '../api.dart';
 import 'orders.dart';
 import 'payment.dart';
 import '../media.dart';
+import '../models.dart';
 import 'product.dart';
 import 'studio.dart';
 
@@ -116,6 +117,10 @@ class CartScreen extends StatelessWidget {
                   ),
                 ),
               const SizedBox(height: 6),
+              if (s.user != null) ...[
+                const _AddressCard(),
+                const SizedBox(height: 10),
+              ],
               CardBox(
                 child: Column(children: [
                   _row('Subtotal', money(s.subtotal)),
@@ -136,29 +141,142 @@ class CartScreen extends StatelessWidget {
                 ]),
               ),
             ]),
-      bottomNavigationBar: lines.isEmpty
-          ? null
-          : SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-                child: FilledButton(
-                  onPressed: short.isNotEmpty
-                      ? () => showMessage(context, 'Business orders need at least ${s.minQty(short.first.product)} of "${short.first.product.name}".', error: true)
-                      : () => _checkout(context, s),
-                  child: Text('Checkout · ${money(s.total)}'),
-                ),
-              ),
-            ),
+      bottomNavigationBar: lines.isEmpty ? null : _PayBar(short: short),
     );
   }
 
-  Future<void> _checkout(BuildContext context, AppState s) async {
+  Widget _row(String label, String value) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(children: [Text(label, style: const TextStyle(color: Brand.muted)), const Spacer(), Text(value, style: const TextStyle(fontWeight: FontWeight.w600))]),
+      );
+}
+
+const _addressFields = [('name', 'Full name'), ('phone', 'Phone number'), ('street', 'Street address'), ('city', 'City'), ('state', 'State')];
+
+bool _addressComplete(Map<String, dynamic>? a) => a != null && _addressFields.every((f) => '${a[f.$1] ?? ''}'.trim().isNotEmpty);
+
+/// Where the order goes, shown in the cart like Jumia and Temu. Tap to change.
+class _AddressCard extends StatelessWidget {
+  const _AddressCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final a = context.select<AppState, Map<String, dynamic>?>((s) => s.user?.address);
+    final ok = _addressComplete(a);
+    return Pressable(
+      onTap: () => editAddress(context),
+      child: CardBox(
+        padding: const EdgeInsets.all(14),
+        child: Row(children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(color: Brand.redSoft, borderRadius: BorderRadius.circular(11)),
+            child: const Icon(Icons.location_on_outlined, color: Brand.red600, size: 21),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ok
+                ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('${a!['name']} · ${a['phone']}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text('${a['street']}, ${a['city']}, ${a['state']}', style: const TextStyle(color: Brand.muted, fontSize: 13, height: 1.35)),
+                  ])
+                : const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Add your delivery address', style: TextStyle(fontWeight: FontWeight.w700)),
+                    SizedBox(height: 2),
+                    Text('Where should we deliver your order?', style: TextStyle(color: Brand.muted, fontSize: 13)),
+                  ]),
+          ),
+          Text(ok ? 'Change' : 'Add', style: const TextStyle(color: Brand.red600, fontWeight: FontWeight.w700)),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Asks for the delivery address in a sheet and saves it on the account.
+/// Returns the address, or null if they closed it.
+Future<Map<String, String>?> editAddress(BuildContext context) {
+  final s = context.read<AppState>();
+  final saved = s.user?.address ?? {};
+  final form = GlobalKey<FormState>();
+  final f = {
+    for (final (key, _) in _addressFields)
+      key: TextEditingController(text: '${saved[key] ?? (key == 'name' ? s.user?.name : key == 'phone' ? s.user?.phone : '') ?? ''}'),
+  };
+  return showModalBottomSheet<Map<String, String>>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    backgroundColor: Colors.white,
+    sheetAnimationStyle: AnimationStyle(curve: easeDrawer, duration: const Duration(milliseconds: 340), reverseDuration: const Duration(milliseconds: 200)),
+    builder: (sheet) => Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheet).bottom),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: Form(
+            key: form,
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Text('Delivery address', style: Brand.head(22)),
+              const SizedBox(height: 14),
+              for (final (key, label) in _addressFields)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: TextFormField(
+                    controller: f[key],
+                    decoration: InputDecoration(labelText: label),
+                    keyboardType: key == 'phone' ? TextInputType.phone : TextInputType.text,
+                    textCapitalization: TextCapitalization.words,
+                    validator: (v) => (v ?? '').trim().isEmpty ? 'Enter your ${label.toLowerCase()}' : null,
+                  ),
+                ),
+              const SizedBox(height: 4),
+              FilledButton(
+                onPressed: () async {
+                  if (!form.currentState!.validate()) return;
+                  final address = {for (final e in f.entries) e.key: e.value.text.trim()};
+                  try {
+                    await s.updateAccount({'address': address});
+                  } catch (_) {/* still use it for this order */}
+                  if (sheet.mounted) Navigator.pop(sheet, address);
+                },
+                child: const Text('Save address'),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// The bar at the bottom of the cart: the total and one Pay button, like
+/// Temu and Jumia. Pay places the order and goes straight to payment.
+class _PayBar extends StatefulWidget {
+  final List<CartView> short;
+  const _PayBar({required this.short});
+
+  @override
+  State<_PayBar> createState() => _PayBarState();
+}
+
+class _PayBarState extends State<_PayBar> {
+  bool _busy = false;
+
+  Future<void> _pay() async {
+    final s = context.read<AppState>();
+    if (widget.short.isNotEmpty) {
+      final l = widget.short.first;
+      return showMessage(context, 'Business orders need at least ${s.minQty(l.product)} of "${l.product.name}".', error: true);
+    }
     if (s.user == null) {
-      final ok = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const LoginScreen(reason: 'Sign in to place your order')));
-      if (ok != true || !context.mounted) return;
+      final ok = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const LoginScreen(reason: 'Sign in to pay for your order')));
+      if (ok != true || !mounted) return;
     }
     // Business buyers: offer their logo on the goods before they pay.
-    final plain = s.isBusiness ? s.cartLines.where((l) => l.custom == null && isCustomizable(l.product)).toList() : const [];
+    final plain = s.isBusiness ? s.cartLines.where((l) => l.custom == null && isCustomizable(l.product)).toList() : const <CartView>[];
     if (plain.isNotEmpty) {
       final choice = await showModalBottomSheet<String>(
         context: context,
@@ -183,86 +301,45 @@ class CartScreen extends StatelessWidget {
                 label: Text(plain.length == 1 ? 'Customise with my logo' : 'Customise ${plain.first.product.name}'),
               ),
               const SizedBox(height: 8),
-              OutlinedButton(onPressed: () => Navigator.pop(sheet, 'skip'), child: const Text('Continue without')),
+              OutlinedButton(onPressed: () => Navigator.pop(sheet, 'skip'), child: const Text('Pay without')),
             ]),
           ),
         ),
       );
-      if (!context.mounted || choice == null) return;
+      if (!mounted || choice == null) return;
       if (choice == 'brand') {
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => StudioScreen(productId: plain.first.product.id)));
         return;
       }
     }
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CheckoutScreen()));
-  }
-
-  Widget _row(String label, String value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(children: [Text(label, style: const TextStyle(color: Brand.muted)), const Spacer(), Text(value, style: const TextStyle(fontWeight: FontWeight.w600))]),
-      );
-}
-
-class CheckoutScreen extends StatefulWidget {
-  const CheckoutScreen({super.key});
-
-  @override
-  State<CheckoutScreen> createState() => _CheckoutScreenState();
-}
-
-class _CheckoutScreenState extends State<CheckoutScreen> {
-  final _form = GlobalKey<FormState>();
-  late final Map<String, TextEditingController> _f;
-  bool _busy = false;
-  String _pay = 'delivery'; // pay online now, or on delivery
-  bool _nomba = false; // switched on at the server (keys set)
-
-  static const _fields = [('name', 'Full name'), ('phone', 'Phone number'), ('street', 'Street address'), ('city', 'City'), ('state', 'State')];
-
-  @override
-  void initState() {
-    super.initState();
-    final s = context.read<AppState>();
-    final saved = s.user?.address ?? {};
-    _f = {
-      for (final (key, _) in _fields)
-        key: TextEditingController(text: (saved[key] ?? (key == 'name' ? s.user?.name : key == 'phone' ? s.user?.phone : '') ?? '').toString()),
-    };
-    // Offer Nomba (and pick it) only once the server says it's switched on.
-    s.api.get('/api/payments/config').then((c) {
-      if (mounted && (c as Map)['nomba'] == true) {
-        setState(() {
-          _nomba = true;
-          _pay = 'nomba';
-        });
-      }
-    }).catchError((_) {});
-  }
-
-  @override
-  void dispose() {
-    for (final c in _f.values) {
-      c.dispose();
+    if (!mounted) return;
+    Map<String, dynamic>? address = s.user?.address;
+    if (!_addressComplete(address)) {
+      address = await editAddress(context);
+      if (address == null || !mounted) return;
     }
-    super.dispose();
-  }
 
-  Future<void> _place() async {
-    if (!_form.currentState!.validate()) return;
+    // Placing the order empties the cart, which removes this bar, so keep the
+    // navigator and messenger now to open the payment page afterwards.
+    final nav = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);
-    final s = context.read<AppState>();
     try {
-      final order = await s.placeOrder({for (final e in _f.entries) e.key: e.value.text.trim()}, pay: _pay);
-      if (!mounted) return;
+      final addr = {for (final (key, _) in _addressFields) key: '${address![key]}'.trim()};
+      Order order;
+      try {
+        order = await s.placeOrder(addr, pay: s.payOnline ? 'nomba' : 'delivery');
+      } on ApiException catch (e) {
+        if (e.code != 'pay_off') rethrow;
+        s.payOnline = false; // switched off on the server since we last looked
+        order = await s.placeOrder(addr, pay: 'delivery');
+      }
       final Widget next = order.awaitingPayment ? PaymentScreen(order: order) : OrderPlacedScreen(orderId: order.id, total: order.total);
-      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => next), (r) => r.isFirst);
+      nav.push(MaterialPageRoute(builder: (_) => next));
     } on ApiException catch (e) {
-      if (!mounted) return;
-      // Online payment not switched on yet: fall back to pay on delivery.
-      if (e.code == 'pay_off') setState(() => _pay = 'delivery');
-      showMessage(context, e.message, error: true);
+      messenger.showSnackBar(SnackBar(content: Text(e.message), backgroundColor: Brand.red600));
     } catch (e) {
-      if (mounted) showMessage(context, e.toString(), error: true);
+      messenger.showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Brand.red600));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -271,137 +348,45 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<AppState>();
-    return Scaffold(
-      appBar: AppBar(title: const Text('Checkout')),
-      body: Form(
-        key: _form,
-        child: ListView(padding: const EdgeInsets.all(16), children: [
-          CardBox(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Delivery address', style: Brand.head(18)),
-              const SizedBox(height: 14),
-              for (final (key, label) in _fields)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: TextFormField(
-                    controller: _f[key],
-                    decoration: InputDecoration(labelText: label),
-                    keyboardType: key == 'phone' ? TextInputType.phone : TextInputType.text,
-                    textCapitalization: TextCapitalization.words,
-                    validator: (v) => (v ?? '').trim().isEmpty ? 'Enter your ${label.toLowerCase()}' : null,
-                  ),
-                ),
-            ]),
-          ),
-          const SizedBox(height: 14),
-          CardBox(
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('How would you like to pay?', style: Brand.head(18)),
-              const SizedBox(height: 10),
-              _PayOption(
-                selected: _pay == 'nomba',
-                icon: Icons.lock_outline,
-                title: 'Pay now with Nomba',
-                text: _nomba ? 'Card, bank transfer or USSD on a secure page.' : 'Coming soon.',
-                onTap: _nomba ? () => setState(() => _pay = 'nomba') : () {},
-              ),
-              _PayOption(
-                selected: _pay == 'delivery',
-                icon: Icons.local_shipping_outlined,
-                title: 'Pay on delivery',
-                text: 'Pay when your goods arrive.',
-                onTap: () => setState(() => _pay = 'delivery'),
-              ),
-            ]),
-          ),
-          const SizedBox(height: 14),
-          CardBox(
-            child: Column(children: [
-              for (final l in s.cartLines)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(children: [
-                    Expanded(child: Text('${l.qty} × ${l.product.name}', maxLines: 1, overflow: TextOverflow.ellipsis)),
-                    Text(money(l.total), style: const TextStyle(fontWeight: FontWeight.w600)),
-                  ]),
-                ),
-              const Divider(height: 20, color: Brand.line),
-              if (s.creditToUse > 0)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(children: [
-                    const Text('Referral credit', style: TextStyle(color: Brand.green)),
-                    const Spacer(),
-                    Text('-${money(s.creditToUse)}', style: const TextStyle(color: Brand.green, fontWeight: FontWeight.w700)),
-                  ]),
-                ),
-              Row(children: [const Text('Delivery', style: TextStyle(color: Brand.muted)), const Spacer(), Text(s.shipping == 0 ? 'Free' : money(s.shipping))]),
-              const SizedBox(height: 8),
-              Row(children: [Text('Total', style: Brand.head(18)), const Spacer(), Text(money(s.total), style: Brand.head(22, weight: FontWeight.w800))]),
-            ]),
-          ),
-        ]),
+    final count = s.cartCount;
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Brand.line)),
       ),
-      bottomNavigationBar: SafeArea(
+      child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-          child: FilledButton(
-            onPressed: _busy || s.cartLines.isEmpty ? null : _place,
-            child: _busy
-                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
-                : Text('${_pay == 'nomba' ? 'Pay' : 'Place order'} · ${money(s.total)}'),
-          ),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          child: Row(children: [
+            Expanded(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Total', style: TextStyle(color: Brand.muted, fontSize: 13)),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(money(s.total), style: Brand.head(24, weight: FontWeight.w800)),
+                ),
+                Text(s.shipping == 0 ? 'Free delivery' : 'Includes ${money(s.shipping)} delivery',
+                    style: TextStyle(color: s.shipping == 0 ? Brand.green : Brand.muted, fontSize: 12, fontWeight: FontWeight.w600)),
+              ]),
+            ),
+            const SizedBox(width: 12),
+            SizedBox(
+              height: 54,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 26)),
+                onPressed: _busy ? null : _pay,
+                icon: _busy
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white))
+                    : Icon(s.payOnline ? Icons.lock_outline : Icons.check_rounded, size: 19),
+                label: Text('${s.payOnline ? 'Pay' : 'Place order'} ($count)', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+              ),
+            ),
+          ]),
         ),
       ),
     );
   }
-}
-
-class _PayOption extends StatelessWidget {
-  final bool selected;
-  final IconData icon;
-  final String title, text;
-  final VoidCallback onTap;
-  const _PayOption({required this.selected, required this.icon, required this.title, required this.text, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        selected: selected,
-        label: '$title. $text',
-        excludeSemantics: true,
-        child: Pressable(
-          onTap: onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            curve: easeOutStrong,
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: selected ? const Color(0xFFFFF5F6) : Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: selected ? Brand.red : Brand.line, width: 1.5),
-            ),
-            child: Row(children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(color: Brand.redSoft, borderRadius: BorderRadius.circular(11)),
-                child: Icon(icon, color: Brand.red600, size: 21),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  Text(text, style: const TextStyle(color: Brand.muted, fontSize: 12.5)),
-                ]),
-              ),
-              Icon(selected ? Icons.radio_button_checked : Icons.radio_button_off, color: selected ? Brand.red : Brand.muted),
-            ]),
-          ),
-        ),
-      );
 }
 
 class OrderPlacedScreen extends StatelessWidget {

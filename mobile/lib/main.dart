@@ -9,9 +9,9 @@ import 'config.dart';
 import 'screens/account.dart';
 import 'screens/business.dart';
 import 'screens/cart.dart';
-import 'screens/exchange.dart';
 import 'screens/home.dart';
 import 'screens/onboarding.dart';
+import 'screens/orders.dart';
 import 'screens/shop.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -107,13 +107,15 @@ class _ShellState extends State<Shell> {
     } else {
       setState(() => _tab = i);
     }
+    // The Orders tab shows the latest step every time it's opened.
+    if (i == 2) context.read<AppState>().ordersChanged();
   }
 
   Widget _root(int i) => switch (i) {
         0 => HomeScreen(goToTab: _go),
         1 => const CategoriesScreen(),
         // Business buyers get their hub here instead, like the website's bottom bar.
-        2 => const _ExchangeOrBusiness(),
+        2 => const _OrdersOrBusiness(),
         3 => const CartScreen(asTab: true),
         _ => const AccountScreen(),
       };
@@ -146,7 +148,7 @@ class _ShellState extends State<Shell> {
 }
 
 /// Same five tabs and look as the website's bottom bar: outline icons, the
-/// open tab in red, Business in place of Exchange for business buyers, and
+/// open tab in red, Business in place of Orders for business buyers, and
 /// "Sign in" in place of "Account" until you log in.
 class _TabBar extends StatelessWidget {
   final int index;
@@ -161,7 +163,7 @@ class _TabBar extends StatelessWidget {
     final tabs = [
       (Icons.home_outlined, 'Home'),
       (Icons.grid_view_outlined, 'Shop'),
-      business ? (Icons.work_outline_rounded, 'Business') : (Icons.swap_horiz_rounded, 'Exchange'),
+      business ? (Icons.work_outline_rounded, 'Business') : (Icons.local_shipping_outlined, 'Orders'),
       (Icons.shopping_cart_outlined, 'Cart'),
       (Icons.person_outline_rounded, signedIn ? 'Account' : 'Sign in'),
     ];
@@ -207,13 +209,26 @@ class _TabBar extends StatelessWidget {
   }
 }
 
-/// Tab 2: the Business hub for business buyers, Exchange for everyone else.
-class _ExchangeOrBusiness extends StatelessWidget {
-  const _ExchangeOrBusiness();
+/// Tab 2: the Business hub for business buyers, order tracking for everyone else.
+class _OrdersOrBusiness extends StatelessWidget {
+  const _OrdersOrBusiness();
 
   @override
   Widget build(BuildContext context) {
     final business = context.select<AppState, bool>((s) => s.isBusiness);
-    return business ? BusinessScreen(goToTab: context.findAncestorStateOfType<_ShellState>()!._go) : const ExchangeScreen();
+    final signedIn = context.select<AppState, bool>((s) => s.user != null);
+    if (business) return BusinessScreen(goToTab: context.findAncestorStateOfType<_ShellState>()!._go);
+    if (!signedIn) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('My orders'), automaticallyImplyLeading: false),
+        body: EmptyState(
+          icon: Icons.local_shipping_outlined,
+          title: 'Track your orders',
+          text: 'Sign in to follow every order from the factory in China to your door.',
+          action: FilledButton(onPressed: () => context.findAncestorStateOfType<_ShellState>()!._go(4), child: const Text('Sign in')),
+        ),
+      );
+    }
+    return const OrdersScreen(asTab: true);
   }
 }

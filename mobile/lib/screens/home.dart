@@ -10,12 +10,11 @@ import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'account.dart';
-import 'exchange.dart';
 import 'photo_search.dart';
 import 'shop.dart';
 
 class HomeScreen extends StatefulWidget {
-  /// Jumps the shell to another tab (0 Home, 1 Shop, 2 Exchange, 3 Cart, 4 Account).
+  /// Jumps the shell to another tab (0 Home, 1 Shop, 2 Orders or Business, 3 Cart, 4 Account).
   final ValueChanged<int> goToTab;
   const HomeScreen({super.key, required this.goToTab});
 
@@ -281,8 +280,7 @@ class ModeSwitch extends StatelessWidget {
 class _Slide {
   final String eyebrow, title, accent, text, cta;
   final String? photo;
-  final int tab; // which bottom tab the button opens
-  const _Slide({required this.eyebrow, required this.title, required this.accent, required this.text, required this.cta, this.photo, this.tab = 1});
+  const _Slide({required this.eyebrow, required this.title, required this.accent, required this.text, required this.cta, this.photo});
 }
 
 final _slides = [
@@ -302,13 +300,12 @@ final _slides = [
     photo: 'assets/banners/ship.jpg',
   ),
   const _Slide(
-    eyebrow: 'Exchange',
-    title: 'Naira to RMB and crypto,',
-    accent: 'in seconds.',
-    text: 'Change naira to yuan, USDT, Bitcoin and more at clear rates.',
-    cta: 'Exchange now',
-    photo: 'assets/banners/bitcoin.jpg',
-    tab: 2,
+    eyebrow: 'Checked by our agents',
+    title: 'We pay the factory,',
+    accent: 'you track every step.',
+    text: 'Our agents check your goods in China before they ship to Nigeria.',
+    cta: 'Start shopping',
+    photo: 'assets/banners/warehouse.jpg',
   ),
 ];
 
@@ -360,14 +357,7 @@ class _HeroSliderState extends State<_HeroSlider> with TickerProviderStateMixin 
     super.dispose();
   }
 
-  void _open(_Slide slide) {
-    // Business buyers have Business in tab 2, so Exchange opens on its own.
-    if (slide.tab == 2 && context.read<AppState>().isBusiness) {
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ExchangeScreen()));
-    } else {
-      widget.goToTab(slide.tab);
-    }
-  }
+  void _open(_Slide slide) => widget.goToTab(1); // every slide's button opens the shop
 
   @override
   Widget build(BuildContext context) {

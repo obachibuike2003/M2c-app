@@ -38,16 +38,19 @@ const BUSINESS_TYPES = [
   { id: 'other', name: 'Something else', cats: [] }
 ];
 
-// Delivery steps shown on the order tracker, in order. The admin moves each order along.
+// Every order's journey, in order. Same steps as the server (TRACK_STAGES in
+// backend/app.py) and the app; the admin moves each order along.
 const TRACK_STAGES = [
   { name: 'Order placed', text: 'We have your order.' },
-  { name: 'Confirmed', text: 'Your order is confirmed and payment is checked.' },
-  { name: 'Bought from supplier', text: 'Our team in China has bought your goods from the factory.' },
-  { name: 'Shipped from China', text: 'Your goods have left China.' },
-  { name: 'Arrived in Nigeria', text: 'Your goods have landed and are going through customs.' },
-  { name: 'At our Lagos warehouse', text: 'Your goods are sorted and ready to go out.' },
-  { name: 'Out for delivery', text: 'A rider is on the way to you.' },
-  { name: 'Delivered', text: 'Your order has been delivered. Enjoy!' }
+  { name: 'Payment confirmed', text: 'Your payment is in and we are processing your order.' },
+  { name: 'Factory paid', text: 'We have paid the factory for your goods.' },
+  { name: 'Goods being prepared', text: 'The factory is getting your products ready.' },
+  { name: 'At the shipping company', text: 'Your goods are with our shipping company in China.' },
+  { name: 'Checked by our agent', text: 'Our agent has checked that everything is in order.' },
+  { name: 'Shipped to Nigeria', text: 'Your goods are on their way to Nigeria.' },
+  { name: 'At our Nigeria warehouse', text: "Your goods have arrived at the shipping company's warehouse in Nigeria." },
+  { name: 'On the way to your state', text: 'Your goods are on their way to your state.' },
+  { name: 'Delivered', text: 'You have your goods. Enjoy!' }
 ];
 
 // Demo agents who look after business customers. The admin panel adds real ones.

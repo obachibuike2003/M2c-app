@@ -25,7 +25,7 @@ class SupportScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Customer service')),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 32), children: [
-        const Text('Questions about an order, your wallet or your account? Here\'s every way to reach us.', style: TextStyle(color: Brand.muted, height: 1.45)),
+        const Text('Questions about an order, a payment or your account? Here\'s every way to reach us.', style: TextStyle(color: Brand.muted, height: 1.45)),
         const SizedBox(height: 14),
         // Customer care chat: answers straight away, and hands anything serious to a person.
         Semantics(
@@ -101,7 +101,7 @@ class SupportScreen extends StatelessWidget {
             const SizedBox(height: 6),
             for (final (q, a) in [
               ('Where is my order?', 'Open My orders and tap any order to see its live tracking stage.'),
-              ('How do I get a refund?', 'If an order doesn\'t arrive or doesn\'t match what was ordered, the amount paid is returned to your ${AppConfig.appName} wallet. WhatsApp us with your order number.'),
+              ('How do I get a refund?', 'If an order doesn\'t arrive or doesn\'t match what was ordered, we refund what you paid. WhatsApp us with your order number.'),
               ('How do I switch to business buying?', 'Tap Business at the top of Home, or choose Business on your Account page, to unlock wholesale prices, an agent and logo branding.'),
               ('How do I verify my identity?', 'Go to Account upgrades & KYC and take a quick selfie. Verified buyers get faster approval on big orders.'),
             ])

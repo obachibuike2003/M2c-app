@@ -7,11 +7,25 @@ mountChrome('orders');
   if (!user) return;
 
   const root = $('#track-root');
-  const o = Store.order(new URLSearchParams(location.search).get('id'));
-  if (!o || (o.userId !== user.id && user.role !== 'admin')) {
+  const id = new URLSearchParams(location.search).get('id');
+  const notFound = () => {
     root.innerHTML = `<div class="card empty">${icon('box', 40)}<h1>Order not found</h1><p>Check the order number, or see all your orders.</p><a class="btn btn-primary" href="orders.html">My orders</a></div>`;
-    return;
-  }
+  };
+  const local = Store.order(id);
+  if (local && (local.userId === user.id || user.role === 'admin')) return show(local);
+  // Orders are kept on the server; times there are ISO strings.
+  root.innerHTML = '<p class="muted">Loading your order…</p>';
+  Store.api('GET', `/api/orders/${encodeURIComponent(id || '')}`).then((o) => {
+    show({
+      ...o,
+      createdAt: Date.parse(o.createdAt),
+      cancelledAt: o.cancelledAt ? Date.parse(o.cancelledAt) : null,
+      stage: Math.min(o.stage || 0, TRACK_STAGES.length - 1),
+      tracking: (o.tracking || []).map((t) => ({ ...t, at: Date.parse(t.at) }))
+    });
+  }).catch(notFound);
+
+  function show(o) {
 
   const when = {};
   (o.tracking || []).forEach((t) => { when[t.stage] = t.at; });
@@ -32,7 +46,7 @@ mountChrome('orders');
           <div><span class="kicker">Order tracker</span><h1>${esc(o.id)}</h1></div>
           ${statusPill(o.status)}
         </div>
-        ${cancelled ? `<p class="notice mt-16">This order was cancelled${o.cancelledAt ? ' on ' + formatDate(o.cancelledAt) : ''}.${o.pay === 'wallet' ? ' Your payment was returned to your wallet.' : ''}</p>` : `
+        ${cancelled ? `<p class="notice mt-16">This order was cancelled${o.cancelledAt ? ' on ' + formatDate(o.cancelledAt) : ''}.${(o.payment || {}).status === 'paid' ? ' We will refund your payment.' : ''}</p>` : `
         <div class="track-now mt-16">
           <p class="small muted">Current status</p>
           <p class="track-now-text">${esc(TRACK_STAGES[o.stage].text)}</p>
@@ -66,6 +80,7 @@ mountChrome('orders');
         ${a ? `<a class="btn btn-outline btn-block mt-16" href="business.html#agent">${icon('chat', 18)} Ask ${esc(a.name)} about this order</a>` : ''}
       </aside>
     </div>`;
+  }
 })();
 
 });

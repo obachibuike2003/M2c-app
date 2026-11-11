@@ -10,7 +10,7 @@ mountChrome('account');
 
   root.innerHTML = `
     <h1>Customer service</h1>
-    <p class="muted mt-12">Questions about an order, your wallet or your account? Here's every way to reach us.</p>
+    <p class="muted mt-12">Questions about an order, a payment or your account? Here's every way to reach us.</p>
 
     ${a ? `
       <section class="card section agent-card mt-16">
@@ -46,7 +46,7 @@ mountChrome('account');
       <h2 id="faq-h">Common questions</h2>
       <dl class="mt-16 support-faq">
         <div><dt>Where is my order?</dt><dd>Open <a href="orders.html">My orders</a> and tap any order to see its live tracking stage and estimated delivery date.</dd></div>
-        <div><dt>How do I get a refund?</dt><dd>If an order doesn't arrive or doesn't match what was ordered, the amount paid is returned to your ${esc(APP.name)} wallet. WhatsApp us with your order number.</dd></div>
+        <div><dt>How do I get a refund?</dt><dd>If an order doesn't arrive or doesn't match what was ordered, we refund what you paid. WhatsApp us with your order number.</dd></div>
         <div><dt>How do I switch to business buying?</dt><dd>Go to <a href="account.html">My account</a> and choose Business under "How are you buying?" to unlock wholesale prices, an agent and logo branding.</dd></div>
         <div><dt>How do I verify my identity?</dt><dd>Go to <a href="kyc.html">Account upgrades &amp; KYC</a> and take a quick selfie. Verified buyers get faster approval on big orders.</dd></div>
       </dl>

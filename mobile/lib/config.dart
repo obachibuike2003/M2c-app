@@ -33,22 +33,19 @@ class AppConfig {
   static const bulkMinQty = 10;
   static const bulkTiers = [(from: 10, off: 5), (from: 50, off: 10), (from: 100, off: 15)];
 
-  /// Exchange rates in naira per 1 unit, the website's SEED_RATES (js/data.js).
-  /// "buy" is what a customer pays, "sell" is what they receive. Demo rates.
-  static const rates = [
-    (code: 'CNY', name: 'Chinese Yuan (RMB)', crypto: false, dp: 2, buy: 219.0, sell: 213.0),
-    (code: 'USDT', name: 'Tether', crypto: true, dp: 2, buy: 1560.0, sell: 1535.0),
-    (code: 'USDC', name: 'USD Coin', crypto: true, dp: 2, buy: 1558.0, sell: 1533.0),
-    (code: 'BTC', name: 'Bitcoin', crypto: true, dp: 8, buy: 165000000.0, sell: 162500000.0),
-    (code: 'ETH', name: 'Ethereum', crypto: true, dp: 6, buy: 5900000.0, sell: 5800000.0),
-    (code: 'BNB', name: 'BNB', crypto: true, dp: 5, buy: 1050000.0, sell: 1030000.0),
-    (code: 'SOL', name: 'Solana', crypto: true, dp: 4, buy: 310000.0, sell: 304000.0),
-    (code: 'TRX', name: 'TRON', crypto: true, dp: 2, buy: 420.0, sell: 410.0),
-  ];
-
+  /// Every order's journey, in order. Same as TRACK_STAGES on the server and
+  /// the website (js/data.js); the team moves each order along from the admin page.
   static const trackStages = [
-    'Order placed', 'Confirmed', 'Bought from supplier', 'Shipped from China',
-    'Arrived in Nigeria', 'At our Lagos warehouse', 'Out for delivery', 'Delivered',
+    (name: 'Order placed', text: 'We have your order.'),
+    (name: 'Payment confirmed', text: 'Your payment is in and we are processing your order.'),
+    (name: 'Factory paid', text: 'We have paid the factory for your goods.'),
+    (name: 'Goods being prepared', text: 'The factory is getting your products ready.'),
+    (name: 'At the shipping company', text: 'Your goods are with our shipping company in China.'),
+    (name: 'Checked by our agent', text: 'Our agent has checked that everything is in order.'),
+    (name: 'Shipped to Nigeria', text: 'Your goods are on their way to Nigeria.'),
+    (name: 'At our Nigeria warehouse', text: 'Your goods have arrived at the shipping company\'s warehouse in Nigeria.'),
+    (name: 'On the way to your state', text: 'Your goods are on their way to your state.'),
+    (name: 'Delivered', text: 'You have your goods. Enjoy!'),
   ];
 
   /// Business buyers' agents, the website's SEED_AGENTS (js/data.js).

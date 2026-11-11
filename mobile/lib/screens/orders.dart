@@ -16,7 +16,9 @@ String _date(DateTime? d) {
 }
 
 class OrdersScreen extends StatefulWidget {
-  const OrdersScreen({super.key});
+  /// True when it's the bottom bar's Orders tab (no back arrow).
+  final bool asTab;
+  const OrdersScreen({super.key, this.asTab = false});
 
   @override
   State<OrdersScreen> createState() => _OrdersScreenState();
@@ -24,11 +26,17 @@ class OrdersScreen extends StatefulWidget {
 
 class _OrdersScreenState extends State<OrdersScreen> {
   late Future<List<Order>> _orders;
+  int _version = -1;
 
   @override
-  void initState() {
-    super.initState();
-    _orders = context.read<AppState>().myOrders();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload when an order is placed (the tab stays alive in the background).
+    final v = context.select<AppState, int>((s) => s.ordersVersion);
+    if (v != _version) {
+      _version = v;
+      _orders = context.read<AppState>().myOrders();
+    }
   }
 
   Future<void> _reload() async {
@@ -40,7 +48,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My orders')),
+      appBar: AppBar(title: const Text('My orders'), automaticallyImplyLeading: !widget.asTab),
       body: FutureBuilder<List<Order>>(
         future: _orders,
         builder: (context, snap) {
@@ -55,7 +63,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
           }
           final orders = snap.data!;
           if (orders.isEmpty) {
-            return const EmptyState(icon: Icons.inventory_2_outlined, title: 'No orders yet', text: 'When you place an order it shows up here, with every step from China to your door.');
+            return RefreshIndicator(
+              color: Brand.red,
+              onRefresh: _reload,
+              child: ListView(children: const [
+                SizedBox(height: 60),
+                EmptyState(icon: Icons.inventory_2_outlined, title: 'No orders yet', text: 'When you place an order it shows up here, with every step from the factory in China to your door.'),
+              ]),
+            );
           }
           return RefreshIndicator(
             color: Brand.red,
@@ -82,6 +97,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         ]),
                         const SizedBox(height: 4),
                         Text('${_date(o.createdAt)} · ${o.items.length} item${o.items.length == 1 ? '' : 's'} · ${money(o.total)}', style: const TextStyle(color: Brand.muted, fontSize: 13)),
+                        if (!o.awaitingPayment && o.status != 'Cancelled' && o.status != 'Payment expired') ...[
+                          const SizedBox(height: 6),
+                          Text('Step ${o.stage + 1} of ${AppConfig.trackStages.length}: ${AppConfig.trackStages[o.stage.clamp(0, last)].text}',
+                              style: const TextStyle(fontSize: 13, height: 1.35)),
+                        ],
                         if (o.awaitingPayment)
                           Padding(
                             padding: const EdgeInsets.only(top: 10),
@@ -126,6 +146,11 @@ class OrderDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final o = order;
     final stages = AppConfig.trackStages;
+    final when = <int, DateTime>{
+      for (final t in (o.raw['tracking'] as List? ?? const []))
+        if (t is Map && t['stage'] is num && DateTime.tryParse('${t['at']}') != null) (t['stage'] as num).toInt(): DateTime.parse('${t['at']}'),
+    };
+    final current = stages[o.stage.clamp(0, stages.length - 1)];
     return Scaffold(
       appBar: AppBar(title: Text(o.id)),
       body: ListView(padding: const EdgeInsets.all(16), children: [
@@ -133,9 +158,13 @@ class OrderDetailScreen extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('Current status', style: TextStyle(color: Brand.muted, fontSize: 13)),
             const SizedBox(height: 2),
-            Text(stages[o.stage.clamp(0, stages.length - 1)], style: Brand.head(22)),
+            Text(o.awaitingPayment ? 'Awaiting payment' : current.name, style: Brand.head(22)),
+            const SizedBox(height: 4),
+            Text(o.awaitingPayment ? 'Pay for this order and we start on it straight away.' : current.text, style: const TextStyle(color: Brand.muted, height: 1.4)),
             const SizedBox(height: 18),
-            for (var i = 0; i < stages.length; i++) _step(stages[i], i < o.stage ? 'done' : i == o.stage ? 'now' : 'next', i == stages.length - 1),
+            for (var i = 0; i < stages.length; i++)
+              _step(stages[i].name, o.awaitingPayment ? 'next' : i < o.stage ? 'done' : i == o.stage ? 'now' : 'next', i == stages.length - 1,
+                  o.awaitingPayment ? null : when[i]),
           ]),
         ),
         const SizedBox(height: 14),
@@ -159,7 +188,7 @@ class OrderDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _step(String name, String state, bool isLast) {
+  Widget _step(String name, String state, bool isLast, DateTime? at) {
     final done = state == 'done';
     final now = state == 'now';
     return IntrinsicHeight(
@@ -186,7 +215,10 @@ class OrderDetailScreen extends StatelessWidget {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.only(bottom: 18, top: 3),
-            child: Text(name, style: TextStyle(fontWeight: done || now ? FontWeight.w700 : FontWeight.w500, color: done || now ? Brand.ink : const Color(0xFF9A9EA8))),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(name, style: TextStyle(fontWeight: done || now ? FontWeight.w700 : FontWeight.w500, color: done || now ? Brand.ink : const Color(0xFF9A9EA8))),
+              if ((done || now) && at != null) Text(_date(at), style: const TextStyle(color: Brand.muted, fontSize: 12)),
+            ]),
           ),
         ),
       ]),

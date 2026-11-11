@@ -98,8 +98,8 @@ mountChrome('home');
   /* ---------- perks, categories ---------- */
   $('#perks').innerHTML = [
     ['truck', 'Shipped from China', `Free above ${money(APP.freeShippingFrom)}`],
-    ['shield', 'Buyer protection', 'Refund to your wallet'],
-    ['swap', 'Naira, RMB, crypto', 'One wallet for all'],
+    ['shield', 'Buyer protection', 'Refund if it goes wrong'],
+    ['check', 'Checked in China', 'By our own agents'],
     ['headset', 'Real support', 'We answer every order']
   ].map(([ic, title, text], i) => `<li class="reveal" style="--i:${i}"><span class="perk-ic">${icon(ic, 22)}</span><div><b>${title}</b><span>${text}</span></div></li>`).join('');
 

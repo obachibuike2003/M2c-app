@@ -8,12 +8,10 @@ import '../widgets.dart';
 import 'assistant.dart';
 import 'auth.dart';
 import 'brand.dart';
-import 'exchange.dart';
 import 'orders.dart';
 import 'referral.dart';
 import 'support.dart';
 import '../terms.dart';
-import 'wallet.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
@@ -84,8 +82,6 @@ class AccountScreen extends StatelessWidget {
         const SizedBox(height: 14),
         _menu([
           _MenuRow(icon: Icons.local_shipping_outlined, title: 'Track my orders', onTap: () => _push(context, const OrdersScreen())),
-          _MenuRow(icon: Icons.account_balance_wallet_outlined, title: 'Wallet', trailing: moneyIn(s.balances['NGN'] ?? 0, 'NGN'), onTap: () => _push(context, const WalletScreen())),
-          _MenuRow(icon: Icons.swap_horiz_rounded, title: 'Exchange', onTap: () => _push(context, const ExchangeScreen())),
           _MenuRow(icon: Icons.favorite_border, title: 'Saved products', trailing: '${u.favs.length}', onTap: () => _push(context, const _SavedScreen())),
         ]),
         if (s.isBusiness) ...[

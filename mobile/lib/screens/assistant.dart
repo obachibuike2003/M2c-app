@@ -10,14 +10,13 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'brand.dart';
 import 'business.dart';
-import 'exchange.dart';
 import 'orders.dart';
 import 'product.dart';
 import 'shop.dart';
 import 'support.dart';
 
 /// Where an answer's buttons lead. `human` opens WhatsApp with a real person.
-enum _Go { brand, agent, orders, products, used, exchange, human }
+enum _Go { brand, agent, orders, products, used, human }
 
 class _Msg {
   final bool me;
@@ -87,7 +86,6 @@ class _AssistantScreenState extends State<AssistantScreen> {
       _Go.orders => const OrdersScreen(),
       _Go.products => const ProductListScreen(),
       _Go.used => const ProductListScreen(condition: 'used'),
-      _Go.exchange => const ExchangeScreen(),
       _Go.human => const SizedBox(),
     };
     if (where == _Go.human) return _talkToPerson();
@@ -175,7 +173,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
           actions: const [('Track my orders', _Go.orders)]);
     }
     if (_has(text, ['pay on delivery', 'payment', 'pay'])) {
-      return const _Msg(false, 'You pay when your goods arrive. Every order has buyer protection: if it doesn\'t arrive or doesn\'t match, the money goes back to your wallet.');
+      return const _Msg(false, 'You pay at checkout by card, bank transfer or USSD. We then pay the factory, and our agents check your goods before they ship to Nigeria. If an order doesn\'t arrive or doesn\'t match, we refund you.',
+          actions: [('Track my orders', _Go.orders)]);
     }
     if (_has(text, ['business', 'wholesale', 'bulk'])) {
       return _Msg(false, 'Tap Business at the top of Home. You\'ll get wholesale prices from ${AppConfig.bulkMinQty} pieces, your own agent and your logo on the goods. It\'s free.');
@@ -283,11 +282,6 @@ class _AssistantScreenState extends State<AssistantScreen> {
         keys: ['used', 'tokunbo', 'second hand', 'fairly used'],
         text: 'Used (Tokunbo) items are inspected before they ship, and each one is marked "Used" on its page.',
         actions: [('See products', _Go.used)],
-      ),
-      (
-        keys: ['rmb', 'yuan', 'usdt', 'crypto', 'exchange', 'pay supplier', 'alipay', 'wechat'],
-        text: 'You can change naira to yuan (RMB), USDT and other crypto in your wallet, then send it to Alipay, WeChat, a bank or a crypto address. Handy for paying your own suppliers in China.',
-        actions: [('Open exchange', _Go.exchange)],
       ),
       (
         keys: ['wholesale', 'bulk', 'discount', 'minimum', 'moq'],

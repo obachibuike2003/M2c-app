@@ -21,6 +21,7 @@ const ICONS = {
   x: '<path d="M6 6l12 12M18 6 6 18"/>',
   trash: '<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/>',
   check: '<path d="m5 12 5 5 9-10"/>',
+  pin: '<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
   chevron: '<path d="m9 6 6 6-6 6"/>',
   arrowRight: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   arrowLeft: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
@@ -411,7 +412,7 @@ function showcase() {
   const slides = [
     ['bag', 'Shop China, pay in naira', 'Phones, fashion, furniture, cars and more, bought straight from China and delivered to your door.'],
     ['briefcase', 'Buying for your business?', `Switch to business for wholesale prices from ${Store.bulk().minQty} pieces, your own agent, and your logo on the goods.`],
-    ['truck', 'Track every step', 'Follow your order from the factory to your door, and pay from one naira wallet.']
+    ['truck', 'Track every step', 'We pay the factory, our agents check your goods, and you follow every step to your door.']
   ];
   let i = 0;
   const dlg = document.createElement('dialog');
@@ -455,7 +456,6 @@ function mountChrome(active) {
   document.title = `${document.title} | ${APP.name}`;
   const user = Store.currentUser();
   const biz = user && user.mode === 'business';
-  const rates = Store.rates();
   const q = new URLSearchParams(location.search).get('q') || '';
   const urlCat = new URLSearchParams(location.search).get('cat') || '';
   const searchCat = active === 'shop' && categories().some((c) => c.id === urlCat) ? urlCat : '';
@@ -466,12 +466,13 @@ function mountChrome(active) {
   const tickerItems = [
     `<span class="ticker-item">${icon('truck', 16)} Free delivery above <b>${money(APP.freeShippingFrom)}</b></span>`,
     `<span class="ticker-item">${icon('briefcase', 16)} Business buyers: wholesale from <b>${Store.bulk().minQty} pieces</b></span>`,
-    ...Object.keys(rates).map((c) => `<span class="ticker-item">1 ${c} <b>${money(rates[c].buy)}</b></span>`),
+    `<span class="ticker-item">${icon('lock', 16)} Pay by card, transfer or USSD</span>`,
+    `<span class="ticker-item">${icon('check', 16)} Every order checked by our agents in China</span>`,
     `<span class="ticker-item">${icon('shield', 16)} Buyer protection on every order</span>`
   ].join('');
 
   $('#site-header').outerHTML = `
-    <div class="ticker" aria-label="Rates and offers">
+    <div class="ticker" aria-label="Offers">
       <div class="ticker-track">
         <div class="ticker-group">${tickerItems}</div>
         <div class="ticker-group" aria-hidden="true">${tickerItems}</div>
@@ -495,7 +496,7 @@ function mountChrome(active) {
           <button type="submit" aria-label="Search">${icon('search')}</button>
         </form>` : ''}
         <nav class="hdr-actions" aria-label="Main">
-          ${biz ? link('business.html', 'briefcase', 'Business', 'business', false, unseen ? `<b class="count">${unseen}</b>` : '') : link('exchange.html', 'swap', 'Exchange', 'exchange')}
+          ${biz ? link('business.html', 'briefcase', 'Business', 'business', false, unseen ? `<b class="count">${unseen}</b>` : '') : ''}
           ${link('orders.html', 'box', 'Orders', 'orders')}
           ${user && user.role === 'admin' ? link('admin.html', 'settings', 'Admin', 'admin') : ''}
           ${user
@@ -516,7 +517,7 @@ function mountChrome(active) {
       <div class="container ftr-grid">
         <div>
           ${logoHtml('logo-light')}
-          <p>${esc(APP.tagline)} Goods sourced from China for you and your business, plus naira exchange for yuan and crypto in one wallet.</p>
+          <p>${esc(APP.tagline)} Goods sourced from China for you and your business, checked by our agents and delivered to your state.</p>
         </div>
         <div>
           <h3>Shop</h3>
@@ -533,20 +534,17 @@ function mountChrome(active) {
         </div>
         <div>
           <h3>Help</h3>
-          <a href="exchange.html">Exchange</a>
-          <a href="wallet.html">Wallet</a>
           <a href="support.html">Customer service</a>
           <a href="terms.html">Terms and Conditions</a>
         </div>
       </div>
-      <div class="container ftr-note">Demo build: payments, balances and exchange rates are simulated and stored only in this browser.</div>
     </footer>
     <nav class="bottom-nav" aria-label="Quick">
       ${tab('index.html', 'home', 'Home', 'home')}
       ${tab('products.html', 'grid', 'Shop', 'shop')}
       ${biz
         ? tab('business.html', 'briefcase', 'Business', 'business', unseen ? `<b class="count">${unseen}</b>` : '')
-        : tab('exchange.html', 'swap', 'Exchange', 'exchange')}
+        : tab('orders.html', 'truck', 'Orders', 'orders')}
       ${tab('cart.html', 'cart', 'Cart', 'cart', '<b class="count" data-cart-count hidden>0</b>', 'data-cart-target')}
       ${tab(user ? 'account.html' : 'login.html', 'user', user ? 'Account' : 'Sign in', user ? 'account' : 'login')}
     </nav>`;

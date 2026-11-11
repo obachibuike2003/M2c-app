@@ -10,6 +10,10 @@ import 'models.dart';
 
 /// Everything the screens read: the catalogue and account from the backend,
 /// plus the cart, which (like on the website) is kept on this device.
+/// One cart line, ready to show: the product, how many, prices, and whether a
+/// business buyer is below the minimum.
+typedef CartView = ({Product product, int qty, int unit, int total, bool short, Map<String, dynamic>? custom});
+
 class AppState extends ChangeNotifier {
   final api = Api();
   late SharedPreferences _prefs;
@@ -59,6 +63,7 @@ class AppState extends ChangeNotifier {
     loadError = null;
     notifyListeners();
     try {
+      _loadPayConfig();
       final data = await api.get('/api/bootstrap') as Map<String, dynamic>;
       categories = (data['categories'] as List).map((e) => Category.fromJson(e as Map<String, dynamic>)).toList();
       products = (data['products'] as List).map((e) => Product.fromJson(e as Map<String, dynamic>)).toList();
@@ -251,7 +256,7 @@ class AppState extends ChangeNotifier {
   }
 
   /// Cart lines joined with their products; lines whose product is gone are skipped.
-  List<({Product product, int qty, int unit, int total, bool short, Map<String, dynamic>? custom})> get cartLines => [
+  List<CartView> get cartLines => [
         for (final l in cart)
           if (product(l.productId) case final p?)
             (product: p, qty: l.qty, unit: unitPrice(p, l.qty), total: unitPrice(p, l.qty) * l.qty, short: l.qty < minQty(p), custom: l.custom),
@@ -283,6 +288,26 @@ class AppState extends ChangeNotifier {
   /// Places the order on the server, then empties the cart. Pay on delivery.
   /// [pay] is "nomba" (pay online now) or "delivery". A Nomba order comes
   /// back waiting for payment, with payment.checkoutLink to pay on.
+  /// True once the server has online payment (Nomba) switched on; the cart's
+  /// button then says Pay and goes straight to the payment page.
+  bool payOnline = false;
+
+  Future<void> _loadPayConfig() async {
+    try {
+      final c = await api.get('/api/payments/config') as Map;
+      payOnline = c['nomba'] == true;
+      notifyListeners();
+    } catch (_) {/* stays off */}
+  }
+
+  /// Goes up whenever an order is placed or paid, so open order lists reload.
+  int ordersVersion = 0;
+
+  void ordersChanged() {
+    ordersVersion++;
+    notifyListeners();
+  }
+
   Future<Order> placeOrder(Map<String, String> address, {String pay = 'nomba'}) async {
     final data = await api.post('/api/orders', {
       'items': [for (final l in cart) {'productId': l.productId, 'qty': l.qty, if (l.custom != null) 'custom': l.custom}],
@@ -294,88 +319,9 @@ class AppState extends ChangeNotifier {
     await _saveCart();
     await updateAccount({'address': address}).catchError((_) {});
     await refresh(); // stock and "sold" counts changed
+    ordersVersion++; // the Orders tab reloads
+    notifyListeners();
     return Order(Map<String, dynamic>.from(data as Map));
-  }
-
-  // ---------------------------------------------------------------- exchange
-
-  /// Wallet balances per currency code, saved on the account like the website's.
-  Map<String, num> get balances => {
-        for (final e in ((user?.raw['balances'] as Map?) ?? const {}).entries) '${e.key}': (e.value as num? ?? 0),
-      };
-
-  static int dpOf(String code) => code == 'NGN' ? 2 : AppConfig.rates.firstWhere((r) => r.code == code).dp;
-
-  static double _floor(num n, int dp) {
-    final f = 1.0 * _pow10(dp);
-    return (n * f + 1e-9).floorToDouble() / f;
-  }
-
-  static num _pow10(int dp) => [for (var i = 0; i < dp; i++) 10].fold<num>(1, (a, b) => a * b);
-
-  /// How much of [to] you get for [amount] of [from]; same maths as the site's Store.quote.
-  double quote(String from, String to, num amount) {
-    if (amount <= 0) return 0;
-    if (from == 'NGN') {
-      final r = AppConfig.rates.firstWhere((r) => r.code == to);
-      return _floor(amount / r.buy, r.dp);
-    }
-    final r = AppConfig.rates.firstWhere((r) => r.code == from);
-    return _floor(amount * r.sell, 2);
-  }
-
-  /// Swaps wallet money; returns how much arrived. Throws with a message the screen can show.
-  Future<double> exchange(String from, String to, num amount) async {
-    if (user == null) throw ApiException('Please sign in first.');
-    final b = balances;
-    if (!(amount > 0)) throw ApiException('Enter an amount.');
-    if (amount > (b[from] ?? 0)) throw ApiException('You do not have enough $from in your wallet.');
-    final got = quote(from, to, amount);
-    if (!(got > 0)) throw ApiException('That amount is too small to exchange.');
-    b[from] = _floor((b[from] ?? 0) - amount, dpOf(from));
-    b[to] = _floor((b[to] ?? 0) + got, dpOf(to));
-    await updateAccount({'balances': b});
-    await _addTxn({'type': 'exchange', 'desc': 'Exchanged $from to $to', 'amount': -amount, 'currency': from, 'gotAmount': got, 'gotCurrency': to});
-    return got;
-  }
-
-  // ---------------------------------------------------------------- wallet
-
-  /// Wallet history. Like the website, it's kept on this device only.
-  List<Map<String, dynamic>> get txns {
-    if (user == null) return const [];
-    final raw = _prefs.getString('txns_${user!.id}');
-    return raw == null ? [] : (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
-  }
-
-  Future<void> _addTxn(Map<String, dynamic> t) async {
-    final list = [{'status': 'completed', 'createdAt': DateTime.now().millisecondsSinceEpoch, ...t}, ...txns];
-    await _prefs.setString('txns_${user!.id}', jsonEncode(list.take(200).toList()));
-  }
-
-  /// Demo top-up, same limits as the website: the money appears instantly.
-  Future<void> fundWallet(num amount) async {
-    if (user == null) throw ApiException('Please sign in first.');
-    if (!(amount >= 100)) throw ApiException('Enter at least ₦100.');
-    if (amount > 10000000) throw ApiException('The demo limit is ₦10,000,000 per top-up.');
-    final b = balances;
-    b['NGN'] = _floor((b['NGN'] ?? 0) + amount, 2);
-    await updateAccount({'balances': b});
-    await _addTxn({'type': 'fund', 'desc': 'Wallet top-up (demo)', 'amount': amount, 'currency': 'NGN'});
-    notifyListeners();
-  }
-
-  /// Sends money out of the wallet; it's held as "processing" until the store pays it.
-  Future<void> requestPayout(String code, num amount, String destination) async {
-    if (user == null) throw ApiException('Please sign in first.');
-    final b = balances;
-    if (!(amount > 0)) throw ApiException('Enter an amount.');
-    if (amount > (b[code] ?? 0)) throw ApiException('You do not have enough $code.');
-    if (destination.trim().isEmpty) throw ApiException('Enter where the money should go.');
-    b[code] = _floor((b[code] ?? 0) - amount, dpOf(code));
-    await updateAccount({'balances': b});
-    await _addTxn({'type': 'payout', 'desc': 'Send to ${destination.trim()}', 'amount': -amount, 'currency': code, 'status': 'processing'});
-    notifyListeners();
   }
 
   // ---------------------------------------------------------------- brand, identity

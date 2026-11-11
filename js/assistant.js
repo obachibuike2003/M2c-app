@@ -64,11 +64,6 @@ const Assistant = (() => {
       actions: [['See used products', 'products.html?condition=used']]
     },
     {
-      keys: ['rmb', 'yuan', 'usdt', 'crypto', 'exchange', 'pay supplier', 'alipay', 'wechat'],
-      text: 'You can change naira to yuan (RMB), USDT and other crypto in your wallet, then send it to Alipay, WeChat, a bank or a crypto address. Handy for paying your own suppliers in China.',
-      actions: [['Open exchange', 'exchange.html']]
-    },
-    {
       keys: ['wholesale', 'bulk', 'discount', 'minimum', 'moq'],
       text: () => {
         const r = Store.bulk();
