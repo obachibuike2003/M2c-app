@@ -222,6 +222,13 @@ const Store = (() => {
     remove('token'); remove('me'); remove('users');
   }
 
+  // Signs in with a session the server just handed back (after a password reset).
+  function useSession(data) {
+    write('token', data.token);
+    write('me', normUser(data.user));
+    return currentUser();
+  }
+
   // Updates the local copy at once and saves it to the server in the background:
   // your own account in full (with a sequence number), anyone else's (admin only)
   // as just the changed fields, so their own newer changes aren't overwritten.
@@ -746,7 +753,7 @@ const Store = (() => {
 
   return {
     ready, flush, api,
-    resetDemo, flag, setFlag, users, currentUser, signup, login, logout, updateUser,
+    resetDemo, flag, setFlag, users, currentUser, signup, login, logout, useSession, updateUser,
     mode, isBusiness, setMode, businessType, submitVerification, setVerification, saveBrand,
     toggleFav, isFav, reviews, addReview,
     agents, agent, saveAgent, deleteAgent, pickAgent, messages, threadOf, sendMessage, markSeen, unseenFor,

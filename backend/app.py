@@ -218,6 +218,13 @@ TRACK_STAGES = [
     "At our Nigeria warehouse", "On the way to your state", "Delivered",
 ]
 PAID_STAGE = 1  # "Payment confirmed"
+STAGE_TEXT = [
+    "We have your order.", "Your payment is in and we are processing your order.",
+    "We have paid the factory for your goods.", "The factory is getting your products ready.",
+    "Your goods are with our shipping company in China.", "Our agent has checked that everything is in order.",
+    "Your goods are on their way to Nigeria.", "Your goods have arrived at the shipping company's warehouse in Nigeria.",
+    "Your goods are on their way to your state.", "You have your goods. Enjoy!",
+]
 
 
 def set_stage(order, stage, note=None):
@@ -798,6 +805,56 @@ def login():
     return jsonify({"user": user.to_dict(), "token": issue_token(user)})
 
 
+# Forgot password: a link that works once, for an hour. The token carries a piece
+# of the current password hash, so it stops working as soon as the password changes.
+_resets = URLSafeTimedSerializer(app.config["SECRET_KEY"], salt="password-reset")
+RESET_MINUTES = 60
+
+
+def _reset_token(user):
+    return _resets.dumps({"u": user.id, "h": user.password_hash[-12:]})
+
+
+@app.post("/api/auth/forgot")
+def forgot_password():
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    if not EMAIL_RE.match(email):
+        return jsonify({"error": "Enter a valid email address."}), 400
+    if not mail_ready() and MAIL_OUTBOX is None:
+        return jsonify({"error": "Password reset by email isn't switched on yet. Please contact support."}), 503
+    user = User.query.filter_by(email=email).first()
+    if user and _allow(f"reset:{email}", 3):
+        link = f"{PUBLIC_SITE_URL}/reset.html?token={_reset_token(user)}"
+        send_mail(user.email, "Reset your Eazy2buy password", [
+            f"Hi {user.name.split(' ')[0]}, we got a request to reset your password.",
+            f"Tap the button to choose a new one. The link works for {RESET_MINUTES} minutes, once.",
+            "If you didn't ask for this, ignore this email; your password stays the same.",
+        ], ("Choose a new password", link))
+    # Same answer either way, so nobody can use this to check who has an account.
+    return jsonify({"ok": True, "message": "If that email has an account, we've sent a link to reset the password."})
+
+
+@app.post("/api/auth/reset")
+def reset_password():
+    data = request.get_json(silent=True) or {}
+    password = data.get("password") or ""
+    try:
+        info = _resets.loads(data.get("token") or "", max_age=RESET_MINUTES * 60)
+    except SignatureExpired:
+        return jsonify({"error": "This link has expired. Ask for a new one."}), 400
+    except BadSignature:
+        return jsonify({"error": "This link isn't valid. Ask for a new one."}), 400
+    user = db.session.get(User, info.get("u")) if isinstance(info, dict) else None
+    if not user or user.password_hash[-12:] != info.get("h"):
+        return jsonify({"error": "This link has already been used. Ask for a new one."}), 400
+    if len(password) < 6:
+        return jsonify({"error": "Your password needs at least 6 characters."}), 400
+    user.set_password(password)
+    db.session.commit()
+    return jsonify({"user": user.to_dict(), "token": issue_token(user)})
+
+
 @app.get("/api/auth/me")
 def me():
     if not current_user.is_authenticated:
@@ -954,6 +1011,7 @@ def admin_update_order(order_id):
         order.tracking = [*(order.tracking or []), {"stage": order.stage, "at": now().isoformat(),
                                                     "note": "Cancelled" + (" - refund due" if paid else "")}]
         db.session.commit()
+        mail_cancelled(order, paid)
         return jsonify(order.to_dict())
     try:
         stage = int(data.get("stage"))
@@ -963,8 +1021,11 @@ def admin_update_order(order_id):
         return jsonify({"error": f"Steps go from 0 to {len(TRACK_STAGES) - 1}."}), 400
     if order.status == "Awaiting payment" and stage >= PAID_STAGE:
         return jsonify({"error": "This order hasn't been paid yet."}), 409
+    moved = stage != order.stage
     set_stage(order, stage, data.get("note"))
     db.session.commit()
+    if moved and data.get("notify", True):
+        mail_stage(order, data.get("note"))
     return jsonify(order.to_dict())
 
 
@@ -991,6 +1052,133 @@ NOMBA_PAY_MINUTES = int(os.environ.get("NOMBA_PAY_MINUTES", 60))
 PUBLIC_API_URL = os.environ.get("PUBLIC_API_URL", "https://api.eazy2buychina.com")
 PUBLIC_APP_URL = os.environ.get("PUBLIC_APP_URL", "https://app.eazy2buychina.com")
 PUBLIC_SITE_URL = os.environ.get("PUBLIC_SITE_URL", "https://eazy2buychina.com")
+
+# --- email (Gmail app password, or any SMTP) ----------------------------------
+# Sent in the background, so a slow or failed email never holds up an order.
+
+import smtplib
+import ssl
+import threading
+from email.message import EmailMessage
+from email.utils import formataddr, parseaddr
+from html import escape as _esc
+
+SMTP_HOST = os.environ.get("SMTP_HOST", "")
+SMTP_PORT = int(os.environ.get("SMTP_PORT") or 465)
+SMTP_USER = os.environ.get("SMTP_USER", "")
+SMTP_PASSWORD = (os.environ.get("SMTP_PASSWORD") or "").replace(" ", "")
+MAIL_FROM = os.environ.get("MAIL_FROM") or SMTP_USER
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL") or SMTP_USER  # new-order alerts go here
+MAIL_OUTBOX = None  # tests set a list here to catch emails instead of sending them
+
+
+def mail_ready():
+    return bool(SMTP_HOST and SMTP_USER and SMTP_PASSWORD)
+
+
+def _deliver(msg):
+    try:
+        if SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=30, context=ssl.create_default_context()) as smtp:
+                smtp.login(SMTP_USER, SMTP_PASSWORD)
+                smtp.send_message(msg)
+        else:
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as smtp:
+                smtp.starttls(context=ssl.create_default_context())
+                smtp.login(SMTP_USER, SMTP_PASSWORD)
+                smtp.send_message(msg)
+    except Exception as e:  # never break the request over an email
+        app.logger.warning("email to %s failed: %s", msg["To"], e)
+
+
+def send_mail(to, subject, lines, button=None, footer=None):
+    """lines: paragraphs of plain text. button: (label, url). Sent in the background."""
+    if not to or not (mail_ready() or MAIL_OUTBOX is not None):
+        return
+    name, addr = parseaddr(MAIL_FROM)
+    msg = EmailMessage()
+    msg["From"] = formataddr((name or "Eazy2buy", addr or SMTP_USER))
+    msg["To"] = to
+    msg["Subject"] = subject
+    text = "\n\n".join(lines) + (f"\n\n{button[0]}: {button[1]}" if button else "") + "\n\n- Eazy2buy, eazy2buychina.com"
+    msg.set_content(text)
+    paras = "".join(f'<p style="margin:0 0 14px;line-height:1.55">{_esc(t)}</p>' for t in lines)
+    btn = (f'<p style="margin:22px 0"><a href="{_esc(button[1])}" style="background:#e3132c;color:#fff;'
+           f'text-decoration:none;padding:13px 22px;border-radius:999px;font-weight:700;display:inline-block">{_esc(button[0])}</a></p>'
+           if button else "")
+    msg.add_alternative(f"""<!doctype html><html><body style="margin:0;background:#f4f5f8;font-family:Arial,Helvetica,sans-serif;color:#15161b">
+<div style="max-width:520px;margin:0 auto;padding:24px 16px">
+  <div style="font-size:22px;font-weight:800;margin-bottom:16px">Eazy2buy<span style="font-size:11px;color:#e3132c;font-weight:700"> china</span></div>
+  <div style="background:#fff;border-radius:16px;padding:24px">{paras}{btn}</div>
+  <p style="font-size:12px;color:#7a7d87;margin:16px 4px">{_esc(footer or "You're getting this because you have an Eazy2buy account. Questions? Just reply to this email.")}</p>
+</div></body></html>""", subtype="html")
+    if MAIL_OUTBOX is not None:
+        MAIL_OUTBOX.append(msg)
+        return
+    threading.Thread(target=_deliver, args=(msg,), daemon=True).start()
+
+
+def _order_lines(order):
+    items = ", ".join(f"{i.qty} x {i.name}" for i in order.items)
+    return f"Order {order.id}: {items}. Total ₦{order.total:,}."
+
+
+def _order_link(order):
+    return ("Track my order", f"{PUBLIC_SITE_URL}/track.html?id={order.id}")
+
+
+def mail_order_placed(order):
+    """Pay on delivery: confirm to the customer, alert the team."""
+    u = order.user
+    send_mail(u.email, f"We've got your order {order.id}", [
+        f"Hi {u.name.split(' ')[0]}, thank you for your order!",
+        _order_lines(order),
+        "Our team will contact you about payment. Once you've paid, we pay the factory and you can follow every step "
+        "until your goods reach you.",
+    ], _order_link(order))
+    _mail_team(order, "New order (pay on delivery)")
+
+
+def mail_paid(order):
+    u = order.user
+    send_mail(u.email, f"Payment received for {order.id}", [
+        f"Hi {u.name.split(' ')[0]}, we've received your payment. Thank you!",
+        _order_lines(order),
+        "Next we pay the factory and get your goods ready. Our agent checks everything before it ships to Nigeria, "
+        "and we'll email you at every step.",
+    ], _order_link(order))
+    _mail_team(order, "New PAID order")
+
+
+def mail_stage(order, note=None):
+    u = order.user
+    step = TRACK_STAGES[order.stage]
+    send_mail(u.email, f"{order.id}: {step}", [
+        f"Hi {u.name.split(' ')[0]}, your order has moved on.",
+        f"Now: {step} (step {order.stage + 1} of {len(TRACK_STAGES)}). {STAGE_TEXT[order.stage]}",
+        *([f"Note from our team: {note}"] if note else []),
+    ], _order_link(order))
+
+
+def mail_cancelled(order, refund_due):
+    u = order.user
+    send_mail(u.email, f"Order {order.id} was cancelled", [
+        f"Hi {u.name.split(' ')[0]}, your order {order.id} has been cancelled.",
+        "We'll refund your payment and contact you about it." if refund_due else "Nothing was charged for it.",
+        "If you didn't expect this, just reply to this email.",
+    ])
+
+
+def _mail_team(order, title):
+    a = order.address or {}
+    u = order.user
+    send_mail(ADMIN_EMAIL, f"{title}: {order.id} - ₦{order.total:,}", [
+        _order_lines(order),
+        f"Customer: {u.name}, {u.email}, {a.get('phone') or u.phone}.",
+        f"Deliver to: {a.get('street', '')}, {a.get('city', '')}, {a.get('state', '')}.",
+        f"Buying as: {'business' if order.mode == 'business' else 'personal'}. Payment: {'Nomba (paid)' if order.pay == 'nomba' else 'on delivery'}.",
+    ], ("Open orders", f"{PUBLIC_SITE_URL}/admin.html#orders"), footer="Sent to the Eazy2buy team.")
+
 
 _nomba_token = {"value": None, "expires": 0.0}
 
@@ -1090,10 +1278,13 @@ def mark_paid(payment, amount, method=None):
     payment.status = "paid"
     payment.paid_at = now()
     order = payment.order
-    if order.status in ("Awaiting payment", "Payment expired"):
+    newly = order.status in ("Awaiting payment", "Payment expired")
+    if newly:
         set_stage(order, PAID_STAGE, "Paid with Nomba")
     _reward_referrer(order.user)
     db.session.commit()
+    if newly:
+        mail_paid(order)
 
 
 def refresh_payment(payment):
@@ -1347,6 +1538,8 @@ def place_order():
     elif first_order:
         _reward_referrer(current_user)  # pay on delivery: rewarded when placed, as before
     db.session.commit()
+    if pay != "nomba":
+        mail_order_placed(order)  # Nomba orders are emailed once they're paid
 
     return jsonify(order.to_dict()), 201
 

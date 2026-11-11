@@ -43,10 +43,37 @@ mountChrome('login');
       <form id="auth-form" class="mt-16" novalidate>
         <label class="field"><span>Email</span><input name="email" type="email" autocomplete="email" required></label>
         <label class="field"><span>Password</span><input name="password" type="password" autocomplete="current-password" required minlength="6"></label>
+        <p class="small right"><button type="button" class="linkish" data-forgot>Forgot password?</button></p>
         <p class="form-error" id="auth-error" role="alert" hidden></p>
         <button class="btn btn-primary btn-block mt-16" type="submit">Sign in</button>
       </form>`;
   }
+
+  // Sends a reset link by email. The same message shows whether or not the email
+  // has an account, so nobody can use it to find out who's registered.
+  function forgotDialog() {
+    const typed = ($('#auth-form [name=email]') || {}).value || '';
+    const dlg = openDialog('Reset your password', `
+      <form id="forgot-form" novalidate>
+        <p class="muted">Enter the email you signed up with. We'll send you a link to choose a new password.</p>
+        <label class="field mt-12"><span>Email</span><input name="email" type="email" autocomplete="email" required value="${esc(typed)}"></label>
+        <p class="form-error" role="alert" hidden></p>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">Send reset link</button><button class="btn btn-outline" type="button" data-close>Cancel</button></div>
+      </form>`);
+    const form = $('#forgot-form', dlg);
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = form.elements.email.value.trim();
+      if (!/^\S+@\S+\.\S+$/.test(email)) return showError($('.form-error', form), 'Enter a valid email address.');
+      try {
+        const res = await withBusy(form, () => Store.api('POST', '/api/auth/forgot', { email }));
+        form.innerHTML = `<p class="notice notice-ok">${esc(res.message)} Check your inbox (and spam folder).</p><div class="form-actions"><button class="btn btn-primary" type="button" data-close>OK</button></div>`;
+      } catch (err) {
+        showError($('.form-error', form), err.message);
+      }
+    });
+  }
+  root.addEventListener('click', (e) => { if (e.target.closest('[data-forgot]')) forgotDialog(); });
 
   function renderStep1() {
     root.innerHTML = `

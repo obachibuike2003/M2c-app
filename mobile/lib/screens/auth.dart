@@ -43,6 +43,66 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// Emails a reset link. The link opens a page on the website to choose a new
+  /// password, which then works in the app too.
+  Future<void> _forgot() async {
+    final email = TextEditingController(text: _email.text.trim());
+    final s = context.read<AppState>();
+    String? error, done;
+    var busy = false;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Colors.white,
+      sheetAnimationStyle: AnimationStyle(curve: easeDrawer, duration: const Duration(milliseconds: 340), reverseDuration: const Duration(milliseconds: 200)),
+      builder: (sheet) => StatefulBuilder(
+        builder: (sheet, setSheet) => Padding(
+          padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + MediaQuery.viewInsetsOf(sheet).bottom),
+          child: SafeArea(
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Text('Reset your password', style: Brand.head(22)),
+              const SizedBox(height: 6),
+              Text(done ?? 'Enter the email you signed up with. We\'ll send you a link to choose a new password.',
+                  style: TextStyle(color: done != null ? Brand.green : Brand.muted, height: 1.45, fontWeight: done != null ? FontWeight.w600 : FontWeight.w400)),
+              const SizedBox(height: 16),
+              if (done == null) ...[
+                TextField(
+                  controller: email,
+                  keyboardType: TextInputType.emailAddress,
+                  autocorrect: false,
+                  decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
+                ),
+                if (error != null) _ErrorText(error!),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: busy
+                      ? null
+                      : () async {
+                          final e = email.text.trim();
+                          if (!RegExp(r'^\S+@\S+\.\S+$').hasMatch(e)) return setSheet(() => error = 'Enter a valid email address');
+                          setSheet(() { busy = true; error = null; });
+                          try {
+                            final res = await s.api.post('/api/auth/forgot', {'email': e}) as Map;
+                            setSheet(() => done = '${res['message']} Check your inbox (and spam folder).');
+                          } catch (err) {
+                            setSheet(() => error = err.toString());
+                          } finally {
+                            if (sheet.mounted) setSheet(() => busy = false);
+                          }
+                        },
+                  child: busy ? const _Spinner() : const Text('Send reset link'),
+                ),
+              ] else
+                FilledButton(onPressed: () => Navigator.pop(sheet), child: const Text('OK')),
+            ]),
+          ),
+        ),
+      ),
+    );
+    email.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return _AuthScaffold(
@@ -71,8 +131,12 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             validator: (v) => (v ?? '').isEmpty ? 'Enter your password' : null,
           ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(onPressed: _forgot, child: const Text('Forgot password?')),
+          ),
           if (_error != null) _ErrorText(_error!),
-          const SizedBox(height: 20),
+          const SizedBox(height: 8),
           FilledButton(onPressed: _busy ? null : _submit, child: _busy ? const _Spinner() : const Text('Sign in')),
           const SizedBox(height: 14),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
